@@ -1,8 +1,8 @@
-import Link from 'next/link';
-import { getSession } from '@/lib/auth';
+import Link from 'next/link'
+import { getCurrentUser } from '@/lib/auth'
 
 export default async function Home() {
-  const session = await getSession();
+  const user = await getCurrentUser()
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-primary-50 to-blue-50 flex items-center justify-center px-4">
@@ -15,15 +15,13 @@ export default async function Home() {
         </p>
 
         <div className="flex gap-4 justify-center flex-wrap">
-          {session ? (
-            <>
-              <Link
-                href="/dashboard"
-                className="btn-primary text-lg px-6 py-3"
-              >
-                Go to Dashboard
-              </Link>
-            </>
+          {user ? (
+            <Link
+              href="/dashboard"
+              className="btn-primary text-lg px-6 py-3"
+            >
+              Go to Dashboard
+            </Link>
           ) : (
             <>
               <Link
@@ -43,5 +41,5 @@ export default async function Home() {
         </div>
       </div>
     </main>
-  );
+  )
 }

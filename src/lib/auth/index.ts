@@ -1,48 +1,44 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
 
 /**
- * Get current session from Supabase
- * Used in server components for session validation
- */
-export const getSession = async () => {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  return session;
-};
-
-/**
- * Get current user from Supabase
- * Used in protected routes
+ * Get current authenticated user (secure)
+ * Contacts Supabase Auth server to validate JWT
  */
 export const getCurrentUser = async () => {
-  const session = await getSession();
-  if (!session) {
-    return null;
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
+
+  if (error || !user) {
+    return null
   }
-  return session.user;
-};
+
+  return user
+}
 
 /**
  * Protected route validator
- * Redirects to login if no session found
- * @throws Redirects to /login if not authenticated
+ * Redirects to login if user not authenticated
  */
 export const protectRoute = async () => {
-  const session = await getSession();
-  if (!session) {
-    redirect('/login');
+  const user = await getCurrentUser()
+
+  if (!user) {
+    redirect('/login')
   }
-  return session;
-};
+
+  return user
+}
 
 /**
  * Sign out user and redirect to login
  */
 export const signOutUser = async () => {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
-  redirect('/login');
-};
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  redirect('/login')
+}
