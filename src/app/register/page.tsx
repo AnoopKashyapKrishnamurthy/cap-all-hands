@@ -1,40 +1,55 @@
-import Link from 'next/link';
-import RegisterForm from '@/components/auth/RegisterForm';
+import Link from 'next/link'
+import RegisterForm from '@/components/auth/RegisterForm'
 
 export const metadata = {
   title: 'Sign Up - CAP All-Hands',
-};
+}
 
 export default function RegisterPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-primary-50 to-blue-50 flex items-center justify-center px-4 py-12">
+    <div className="flex justify-center px-4 py-20">
+
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-lg shadow-lg p-8">
+
+        <div className="bg-white rounded-2xl shadow-sm border p-8 sm:p-10">
+
+          {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">
-              Join CAP All-Hands
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+              Create Your Account
             </h1>
             <p className="text-gray-600 mt-2">
-              Create your team account
+              Join <span className="font-medium">CAP All-Hands</span>
             </p>
           </div>
 
+          {/* Form */}
           <RegisterForm />
 
-          <div className="mt-8 pt-8 border-t border-gray-200 text-center">
-            <p className="text-sm text-gray-600">
+          {/* Divider */}
+          <div className="my-8 border-t border-gray-200" />
+
+          {/* Footer */}
+          <div className="text-center text-sm text-gray-600 space-y-3">
+
+            
+            <p className="text-xs text-gray-400 leading-relaxed">
               By signing up, you agree to our{' '}
-              <Link href="#" className="text-primary-600 hover:underline">
+              <Link href="/terms" className="hover:underline">
                 Terms of Service
               </Link>{' '}
               and{' '}
-              <Link href="#" className="text-primary-600 hover:underline">
+              <Link href="/privacy" className="hover:underline">
                 Privacy Policy
-              </Link>
+              </Link>.
             </p>
+
           </div>
+
         </div>
+
       </div>
-    </main>
-  );
+
+    </div>
+  )
 }
