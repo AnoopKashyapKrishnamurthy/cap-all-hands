@@ -16,7 +16,9 @@ export default function ReviewCard({
 }: ReviewCardProps) {
   const router = useRouter()
   const supabase = createClient()
+
   const [deleting, setDeleting] = useState(false)
+  const [confirming, setConfirming] = useState(false)
 
   const isOwner = currentUserId === review.user_id
 
@@ -24,13 +26,16 @@ export default function ReviewCard({
   const avatarUrl = review.profile?.avatar_url
   const initial = displayName.charAt(0).toUpperCase()
 
+  const formattedDate = new Date(review.created_at).toLocaleDateString(
+    undefined,
+    { year: 'numeric', month: 'short', day: 'numeric' }
+  )
+
+  // ✅ SAFE ARRAY NORMALIZATION (fixes TS warning)
+  const media = review.media_urls ?? []
+
   const handleDelete = async () => {
     if (!isOwner) return
-
-    const confirmDelete = window.confirm(
-      'Are you sure you want to delete this review?'
-    )
-    if (!confirmDelete) return
 
     setDeleting(true)
 
@@ -40,7 +45,7 @@ export default function ReviewCard({
       .eq('id', review.id)
 
     if (error) {
-      console.error('Delete error:', error)
+      console.error('Delete failed:', error)
       setDeleting(false)
       return
     }
@@ -49,12 +54,12 @@ export default function ReviewCard({
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 p-6">
+    <div className="bg-white rounded-2xl border shadow-sm hover:shadow-md transition p-6 space-y-5">
 
       {/* Header */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">
+      <div className="flex justify-between items-start gap-4">
+        <div className="space-y-1">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
             {review.book_title}
           </h2>
           <p className="text-sm text-gray-500">
@@ -63,7 +68,7 @@ export default function ReviewCard({
         </div>
 
         {/* Rating */}
-        <div className="flex gap-1 text-yellow-400 text-lg">
+        <div className="flex items-center gap-1 text-yellow-400 text-lg">
           {Array.from({ length: 5 }).map((_, i) => (
             <span key={i}>
               {i < review.rating ? '★' : '☆'}
@@ -73,22 +78,22 @@ export default function ReviewCard({
       </div>
 
       {/* Review Text */}
-      <p className="mt-4 text-gray-700 leading-relaxed whitespace-pre-line">
+      <p className="text-gray-700 leading-relaxed whitespace-pre-line text-sm sm:text-base">
         {review.review_text}
       </p>
 
       {/* Media Section */}
-      {review.media_urls && review.media_urls.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
-          {review.media_urls.map((url) => (
+      {media.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {media.map((url) => (
             <div
               key={url}
-              className="overflow-hidden rounded-xl border bg-gray-50"
+              className="flex items-center justify-center bg-gray-100 rounded-2xl p-3 border"
             >
               <img
                 src={url}
                 alt="Review media"
-                className="object-cover w-full h-32 hover:scale-105 transition-transform duration-300"
+                className="max-h-72 w-auto object-contain rounded-xl transition-transform duration-300 hover:scale-[1.02]"
               />
             </div>
           ))}
@@ -96,52 +101,69 @@ export default function ReviewCard({
       )}
 
       {/* Footer */}
-      <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-100">
+      <div className="flex justify-between items-center pt-4 border-t">
 
-        {/* Author Info */}
+        {/* Author */}
         <div className="flex items-center gap-3">
           {avatarUrl ? (
             <img
               src={avatarUrl}
               alt={displayName}
-              className="h-8 w-8 rounded-full object-cover"
+              className="h-9 w-9 rounded-full object-cover ring-2 ring-gray-100"
             />
           ) : (
-            <div className="h-8 w-8 rounded-full bg-indigo-500 text-white flex items-center justify-center text-sm font-semibold">
+            <div className="h-9 w-9 rounded-full bg-indigo-500 text-white flex items-center justify-center text-sm font-semibold">
               {initial}
             </div>
           )}
 
-          <div>
-            <p className="text-sm font-medium text-gray-800">
+          <div className="leading-tight">
+            <p className="text-sm font-medium text-gray-900">
               {displayName}
             </p>
             <p className="text-xs text-gray-500">
-              {new Date(review.created_at).toLocaleString()}
+              {formattedDate}
             </p>
           </div>
         </div>
 
         {/* Owner Actions */}
         {isOwner && (
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="px-3 py-1.5 text-sm rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition"
-            >
-              Edit
-            </button>
+          <div className="flex items-center gap-4 text-sm">
 
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="px-3 py-1.5 text-sm rounded-lg bg-red-500 hover:bg-red-600 text-white transition disabled:opacity-50"
-            >
-              {deleting ? 'Deleting...' : 'Delete'}
-            </button>
+
+
+            {!confirming ? (
+              <button
+                type="button"
+                onClick={() => setConfirming(true)}
+                className="text-red-500 hover:underline"
+              >
+                Delete
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="text-red-600 font-medium"
+                >
+                  {deleting ? 'Deleting...' : 'Confirm'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirming(false)}
+                  className="text-gray-500"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+
           </div>
         )}
+
       </div>
     </div>
   )

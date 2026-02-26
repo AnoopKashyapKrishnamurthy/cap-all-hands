@@ -1,35 +1,64 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useTransition } from 'react';
-import { logoutAction } from '@/lib/auth/actions';
+import { useState, useTransition } from 'react'
+import { logoutAction } from '@/lib/auth/actions'
 
-export default function LogoutButton() {
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+interface LogoutButtonProps {
+  variant?: 'default' | 'minimal'
+}
+
+export default function LogoutButton({
+  variant = 'default',
+}: LogoutButtonProps) {
+  const [error, setError] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
 
   const handleLogout = () => {
+    if (isPending) return
+
+    setError(null)
+
     startTransition(async () => {
       try {
-        await logoutAction();
+        await logoutAction()
       } catch (err) {
-        setError('Failed to logout. Please try again.');
+        console.error(err)
+        setError('Failed to logout. Please try again.')
       }
-    });
-  };
+    })
+  }
+
+  const baseClasses =
+    'inline-flex items-center justify-center rounded-lg transition font-medium disabled:opacity-50 disabled:cursor-not-allowed'
+
+  const styles =
+    variant === 'minimal'
+      ? 'text-red-600 hover:underline text-sm'
+      : 'bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm'
 
   return (
-    <div>
+    <div className="space-y-2">
       {error && (
-        <p className="text-red-600 text-sm mb-2">{error}</p>
+        <p className="text-red-600 text-sm">
+          {error}
+        </p>
       )}
+
       <button
+        type="button"
         onClick={handleLogout}
         disabled={isPending}
-        className="btn-danger disabled:opacity-50 disabled:cursor-not-allowed"
+        className={`${baseClasses} ${styles}`}
       >
-        {isPending ? 'Logging out...' : 'Logout'}
+        {isPending ? (
+          <span className="flex items-center gap-2">
+            <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            Logging out...
+          </span>
+        ) : (
+          'Logout'
+        )}
       </button>
     </div>
-  );
+  )
 }
