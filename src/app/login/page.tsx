@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import LoginForm from '@/components/auth/LoginForm'
 
+
 export const metadata = {
   title: 'Sign In - CAP All-Hands',
 }
@@ -8,9 +9,7 @@ export const metadata = {
 export default function LoginPage() {
   return (
     <div className="flex justify-center px-4 py-20">
-
       <div className="w-full max-w-md">
-
         <div className="bg-white rounded-2xl shadow-sm border p-8 sm:p-10">
 
           {/* Header */}
@@ -23,28 +22,30 @@ export default function LoginPage() {
               <span className="font-medium">CAP All-Hands</span>
             </p>
           </div>
-
-          {/* Form */}
-          <LoginForm />
+          
 
           {/* Divider */}
-          <div className="my-8 border-t border-gray-200" />
+          <div className="flex items-center my-6">
+            <div className="flex-grow border-t border-gray-200" />
+            <span className="mx-4 text-xs text-gray-400 uppercase">
+              {/* or */}
+            </span>
+            <div className="flex-grow border-t border-gray-200" />
+          </div>
+
+          {/* Email Login */}
+          <LoginForm />
 
           {/* Footer */}
-          <div className="text-center text-sm text-gray-600 space-y-2">
-
-            <p className="text-xs text-gray-400">
-              By signing in, you agree to our{' '}
-              <Link href="/terms" className="hover:underline">
-                Terms of Service
-              </Link>
-            </p>
+          <div className="mt-8 text-center text-xs text-gray-400">
+            By signing in, you agree to our{' '}
+            <Link href="/terms" className="hover:underline">
+              Terms of Service
+            </Link>
           </div>
 
         </div>
-
       </div>
-
     </div>
   )
 }
