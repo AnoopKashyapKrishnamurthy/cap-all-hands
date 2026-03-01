@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { protectRoute } from '@/lib/auth'
-// import LogoutButton from '@/components/auth/LogoutButton'
 
 export const metadata = {
   title: 'Dashboard - CAP All-Hands',
@@ -22,14 +21,10 @@ export default async function DashboardPage() {
             Welcome back, <span className="font-medium">{user.email}</span>
           </p>
         </div>
-
-
       </div>
 
       {/* Overview Cards */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-
-
 
         {/* Book Reviews Card */}
         <div className="bg-white rounded-2xl shadow-sm border p-6 hover:shadow-md transition">
@@ -58,7 +53,32 @@ export default async function DashboardPage() {
           </div>
         </div>
 
+        {/* Blogs Card */}
+        <div className="bg-white rounded-2xl shadow-sm border p-6 hover:shadow-md transition">
+          <h3 className="text-lg font-semibold mb-4">
+            ✍ Blogs
+          </h3>
 
+          <p className="text-gray-600 text-sm mb-5">
+            Share insights, updates, and ideas with the team.
+          </p>
+
+          <div className="flex flex-col gap-3">
+            <Link
+              href="/blogs"
+              className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 transition text-center"
+            >
+              Browse Blogs
+            </Link>
+
+            <Link
+              href="/blogs/new"
+              className="bg-green-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-green-700 transition text-center"
+            >
+              Create Blog
+            </Link>
+          </div>
+        </div>
 
       </div>
 

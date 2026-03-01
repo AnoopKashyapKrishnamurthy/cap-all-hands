@@ -12,3 +12,19 @@ export interface Review {
     avatar_url: string | null
   }
 }
+
+
+export interface Blog {
+  id: string
+  title: string
+  slug: string
+  content: string
+  cover_image: string | null
+  created_at: string
+  author_id: string
+  published: boolean
+   profile?: {
+    display_name: string
+    avatar_url: string | null
+  }
+}

@@ -1,46 +1,58 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 
 /**
- * Auth callback route for OAuth providers
- * Handles the redirect after user authenticates with OAuth provider
+ * OAuth callback handler
+ * - Exchanges auth code for session
+ * - Handles errors safely
+ * - Redirects user appropriately
  */
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const code = searchParams.get('code');
-  const error = searchParams.get('error');
-  const error_description = searchParams.get('error_description');
+  const { searchParams, origin } = new URL(request.url)
 
-  // If there's an error in the callback, redirect to login with error message
+  const code = searchParams.get('code')
+  const error = searchParams.get('error')
+  const errorDescription = searchParams.get('error_description')
+  const next = searchParams.get('next') || '/dashboard'
+
+  // 🔴 If OAuth provider returned an error
   if (error) {
     return NextResponse.redirect(
       new URL(
-        `/login?error=${encodeURIComponent(error_description || error)}`,
-        request.url
+        `/login?error=${encodeURIComponent(
+          errorDescription || error
+        )}`,
+        origin
       )
-    );
+    )
   }
 
-  // Exchange the code for a session
+  // 🟢 If we received an authorization code
   if (code) {
     try {
-      const supabase = await createClient();
-      await supabase.auth.exchangeCodeForSession(code);
-      
-      // Redirect to dashboard on success
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    } catch (error) {
-      // Log error in production through server logs only
-      // Do not expose error details to client
+      const supabase = await createClient()
+
+      const { error: exchangeError } =
+        await supabase.auth.exchangeCodeForSession(code)
+
+      if (exchangeError) {
+        throw exchangeError
+      }
+
+
+      // Safe redirect (prevent open redirect attacks)
+      const safeRedirect =
+        next.startsWith('/') ? next : '/dashboard'
+
+      return NextResponse.redirect(new URL(safeRedirect, origin))
+
+    } catch (err) {
       return NextResponse.redirect(
-        new URL(
-          '/login?error=Authentication failed',
-          request.url
-        )
-      );
+        new URL('/login?error=Authentication failed', origin)
+      )
     }
   }
 
-  // If no code or error, redirect to login
-  return NextResponse.redirect(new URL('/login', request.url));
+  // 🟡 Fallback
+  return NextResponse.redirect(new URL('/login', origin))
 }
