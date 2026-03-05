@@ -15,7 +15,7 @@ export default async function ReviewsPage() {
     .from('book_reviews')
     .select(`
       *,
-      profile:user_profiles!book_reviews_user_id_fkey (
+      profile:user_profiles (
         display_name,
         avatar_url
       )
@@ -23,7 +23,7 @@ export default async function ReviewsPage() {
     .order('created_at', { ascending: false })
 
   if (error) {
-    console.error(error)
+    console.error('Reviews fetch error:', error)
     return (
       <div className="flex items-center justify-center py-24">
         <div className="bg-white border rounded-2xl shadow-sm p-8 text-center">
@@ -39,7 +39,7 @@ export default async function ReviewsPage() {
   }
 
   return (
-    <section className="max-w-5xl mx-auto space-y-10">
+    <section className="max-w-5xl mx-auto space-y-10 py-12 px-6">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -63,13 +63,23 @@ export default async function ReviewsPage() {
       {/* Reviews List */}
       {reviews && reviews.length > 0 ? (
         <div className="space-y-6">
-          {reviews.map((r) => (
-            <ReviewCard
-              key={r.id}
-              review={r}
-              currentUserId={currentUserId}
-            />
-          ))}
+          {reviews.map((review) => {
+            // 🔥 IMPORTANT: profile may be array depending on relation
+            const profile = Array.isArray(review.profile)
+              ? review.profile[0]
+              : review.profile
+
+            return (
+              <ReviewCard
+                key={review.id}
+                review={{
+                  ...review,
+                  profile,
+                }}
+                currentUserId={currentUserId}
+              />
+            )
+          })}
         </div>
       ) : (
         <div className="bg-white border rounded-2xl shadow-sm p-12 text-center">
