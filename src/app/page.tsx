@@ -11,8 +11,7 @@ export default async function Home() {
       </h1>
 
       <p className="text-lg text-gray-600 max-w-2xl mb-10">
-        CAP All-Hands helps teams collaborate, track updates,
-        and communicate seamlessly across the organization.
+        Collaborate. Communicate. Stay aligned
       </p>
 
       <div className="flex flex-col sm:flex-row gap-4">

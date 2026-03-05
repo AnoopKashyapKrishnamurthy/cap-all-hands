@@ -1,12 +1,20 @@
 import Link from 'next/link'
 import LoginForm from '@/components/auth/LoginForm'
 
-
 export const metadata = {
   title: 'Sign In - CAP All-Hands',
 }
 
-export default function LoginPage() {
+interface LoginPageProps {
+  searchParams: Promise<{
+    message?: string
+    error?: string
+  }>
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const { message, error } = await searchParams
+
   return (
     <div className="flex justify-center px-4 py-20">
       <div className="w-full max-w-md">
@@ -22,7 +30,18 @@ export default function LoginPage() {
               <span className="font-medium">CAP All-Hands</span>
             </p>
           </div>
-          
+
+          {message && (
+            <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4">
+              <p className="text-sm font-medium text-green-800">{message}</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
+              <p className="text-sm font-medium text-red-800">{error}</p>
+            </div>
+          )}
 
           {/* Divider */}
           <div className="flex items-center my-6">

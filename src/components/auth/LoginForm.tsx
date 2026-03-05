@@ -31,10 +31,9 @@ export default function LoginForm() {
         return;
       }
 
-      // Session is automatically persisted, redirect to dashboard
       router.push('/dashboard');
       router.refresh();
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred. Please try again.');
       setLoading(false);
     }
@@ -82,8 +81,16 @@ export default function LoginForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="input-field disabled:bg-gray-100 disabled:cursor-not-allowed"
-          placeholder="••••••••"
+          placeholder="********"
         />
+        <div className="mt-2 text-right">
+          <Link
+            href="/forgot-password"
+            className="text-sm font-medium text-primary-600 hover:text-primary-700"
+          >
+            Forgot password?
+          </Link>
+        </div>
       </div>
 
       <button
