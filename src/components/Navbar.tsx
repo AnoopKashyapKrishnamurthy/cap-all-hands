@@ -7,17 +7,19 @@ import { Menu, X } from 'lucide-react'
 import LogoutButton from './auth/LogoutButton'
 import ProfileDropdown from './auth/ProfieDropdown'
 
-
-export default function Navbar({ user }: { user: any }) {
+export default function Navbar({
+  user,
+  profile
+}: {
+  user: any
+  profile: any
+}) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  const email =
-     user?.email || ''
+  const email = user?.email || ''
+  const avatarUrl = profile?.avatar_url || null
 
-  const avatarUrl = user?.profile?.avatar_url
-
-  /* Close mobile menu on route change */
   useEffect(() => {
     setMobileOpen(false)
   }, [pathname])
@@ -27,25 +29,23 @@ export default function Navbar({ user }: { user: any }) {
       <div className="max-w-7xl mx-auto px-4 md:px-6">
         <div className="flex justify-between items-center h-16">
 
-          {/* Logo */}
           <Link
             href="/"
-            className="group inline-flex items-center text-lg md:text-xl font-bold tracking-tight transition duration-300"
+            className="group inline-flex items-center text-lg md:text-xl font-bold tracking-tight"
           >
-            <span className="text-gray-900 group-hover:text-blue-600 transition-colors duration-300">
+            <span className="text-gray-900 group-hover:text-blue-600">
               CAP
             </span>
-            <span className="ml-1 text-orange-600 group-hover:text-blue-700 transition-colors duration-300">
+            <span className="ml-1 text-orange-600 group-hover:text-blue-700">
               All-Hands
             </span>
           </Link>
 
-          {/* Desktop Menu */}
           <div className="hidden md:flex items-center gap-4">
             {!user ? (
               <Link
                 href="/login"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
               >
                 Login
               </Link>
@@ -57,22 +57,19 @@ export default function Navbar({ user }: { user: any }) {
             )}
           </div>
 
-          {/* Mobile Toggle */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition"
+            className="md:hidden p-2 rounded-lg hover:bg-gray-100"
           >
             {mobileOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
+
         </div>
       </div>
 
-      {/* Mobile Menu */}
       <div
         className={`md:hidden overflow-hidden transition-all duration-300 ${
-          mobileOpen
-            ? 'max-h-[600px] opacity-100'
-            : 'max-h-0 opacity-0'
+          mobileOpen ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
         <div className="bg-white border-t px-6 py-6 space-y-4">
@@ -81,9 +78,6 @@ export default function Navbar({ user }: { user: any }) {
             <div className="pb-4 border-b">
               <p className="text-sm font-medium">
                 {email}
-              </p>
-              <p className="text-xs text-gray-500 break-all">
-                {user.email}
               </p>
             </div>
           )}
@@ -108,6 +102,13 @@ export default function Navbar({ user }: { user: any }) {
                 Dashboard
               </Link>
 
+              <Link
+                href="/people"
+                className="block text-lg font-medium py-2"
+              >
+                People
+              </Link>
+
               <div className="pt-4 border-t">
                 <LogoutButton variant="minimal" />
               </div>
@@ -120,6 +121,7 @@ export default function Navbar({ user }: { user: any }) {
               Login
             </Link>
           )}
+
         </div>
       </div>
     </header>
