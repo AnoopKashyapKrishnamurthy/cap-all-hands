@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
 export default function ResetPasswordForm() {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [isPending, startTransition] = useTransition()
 
   const [password, setPassword] = useState('')
@@ -19,23 +19,80 @@ export default function ResetPasswordForm() {
   const [status, setStatus] = useState<'loading' | 'valid' | 'invalid'>('loading')
 
   useEffect(() => {
-    // We check the session once. Supabase recovery links automatically 
-    // sign the user in with a "recovery" session.
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
+    let cancelled = false
+    let intervalId: ReturnType<typeof setInterval> | null = null
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+
+    const cleanupTimers = () => {
+      if (intervalId) clearInterval(intervalId)
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+
+    // Recovery links can take a few seconds while the hash token is processed.
+    // We listen for auth events and poll briefly before declaring the link invalid.
+    const initialize = async () => {
+      const setValid = () => {
+        if (cancelled) return
         setStatus('valid')
-      } else {
-        // Small delay to prevent flickering if the URL fragment 
-        // is still being processed by the client SDK
-        setTimeout(async () => {
-          const { data: { session: retrySession } } = await supabase.auth.getSession()
-          setStatus(retrySession ? 'valid' : 'invalid')
-        }, 500)
+        cleanupTimers()
+      }
+
+      const setInvalid = () => {
+        if (cancelled) return
+        setStatus('invalid')
+        cleanupTimers()
+      }
+
+      const hasSession = async () => {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        return !!session
+      }
+
+      if (await hasSession()) {
+        setValid()
+        return
+      }
+
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((event, session) => {
+        if (
+          session &&
+          (event === 'PASSWORD_RECOVERY' ||
+            event === 'SIGNED_IN' ||
+            event === 'TOKEN_REFRESHED')
+        ) {
+          setValid()
+        }
+      })
+
+      intervalId = setInterval(async () => {
+        if (await hasSession()) {
+          setValid()
+        }
+      }, 400)
+
+      timeoutId = setTimeout(() => {
+        setInvalid()
+      }, 10000)
+
+      return () => {
+        subscription.unsubscribe()
       }
     }
 
-    checkSession()
+    let unsubscribe: (() => void) | undefined
+    initialize().then((fn) => {
+      unsubscribe = fn
+    })
+
+    return () => {
+      cancelled = true
+      cleanupTimers()
+      if (unsubscribe) unsubscribe()
+    }
   }, [supabase])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
