@@ -24,106 +24,144 @@ export default function Navbar({
     setMobileOpen(false)
   }, [pathname])
 
-  return (
-    <header className="sticky top-0 z-50 backdrop-blur bg-white/80 border-b">
-      <div className="max-w-7xl mx-auto px-4 md:px-6">
-        <div className="flex justify-between items-center h-16">
+  // Centralized nav items to manage links in one place
+  const navItems = [
+    { name: 'Dashboard', href: '/dashboard', authRequired: true },
+    { name: 'People', href: '/people', authRequired: true },
+    { name: 'Gallery', href: '/gallery', authRequired: true },
+    { name: 'Blogs', href: '/blogs', authRequired: true },
+    { name: 'Profile', href: '/profile', authRequired: true },
+  ]
 
-          <Link
-            href="/"
-            className="group inline-flex items-center text-lg md:text-xl font-bold tracking-tight"
-          >
-            <span className="text-gray-900 group-hover:text-blue-600">
-              CAP
-            </span>
-            <span className="ml-1 text-orange-600 group-hover:text-blue-700">
-              All-Hands
-            </span>
-          </Link>
+  return (<header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-slate-200 shadow-sm">
+    <div className="max-w-7xl mx-auto px-4 md:px-6">
+      <div className="flex justify-between items-center h-16">
 
-          <div className="hidden md:flex items-center gap-4">
-            {!user ? (
-              <Link
-                href="/login"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-              >
-                Login
-              </Link>
-            ) : (
-              <ProfileDropdown
-                email={email}
-                avatarUrl={avatarUrl}
-              />
-            )}
-          </div>
+        {/* LOGO */}
+        <Link
+          href="/"
+          className="group inline-flex items-center text-lg md:text-xl font-semibold tracking-tight"
+        >
+          <span className="text-slate-900 group-hover:text-accent-600 transition-colors">
+            CAP
+          </span>
+          <span className="ml-1 px-2 py-0.5 rounded-md bg-accent-100 text-accent-700 text-sm font-medium group-hover:bg-accent-200 transition-all">
+            All-Hands
+          </span>
+        </Link>
 
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-gray-100"
-          >
-            {mobileOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+        {/* DESKTOP NAV */}
+        <div className="hidden md:flex items-center gap-6">
+          <nav className="flex items-center gap-5 mr-2">
+            {navItems.map((item) => (
+              (!item.authRequired || user) && (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`text-sm font-medium transition-all relative group/link ${pathname === item.href
+                      ? 'text-accent-600'
+                      : 'text-slate-600 hover:text-accent-600'
+                    }`}
+                >
+                  {item.name}
 
-        </div>
-      </div>
+                  {/* underline */}
+                  <span
+                    className={`absolute -bottom-1 left-0 h-[2px] rounded-full bg-accent-500 transition-all duration-300 ${pathname === item.href
+                        ? 'w-full'
+                        : 'w-0 group-hover/link:w-full'
+                      }`}
+                  />
+                </Link>
+              )
+            ))}
+          </nav>
 
-      <div
-        className={`md:hidden overflow-hidden transition-all duration-300 ${
-          mobileOpen ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
-        }`}
-      >
-        <div className="bg-white border-t px-6 py-6 space-y-4">
-
-          {user && (
-            <div className="pb-4 border-b">
-              <p className="text-sm font-medium">
-                {email}
-              </p>
-            </div>
-          )}
-
-          <Link href="/" className="block text-lg font-medium py-2">
-            Home
-          </Link>
-
-          {user ? (
-            <>
-              <Link
-                href="/profile"
-                className="block text-lg font-medium py-2"
-              >
-                Profile
-              </Link>
-
-              <Link
-                href="/dashboard"
-                className="block text-lg font-medium py-2"
-              >
-                Dashboard
-              </Link>
-
-              <Link
-                href="/people"
-                className="block text-lg font-medium py-2"
-              >
-                People
-              </Link>
-
-              <div className="pt-4 border-t">
-                <LogoutButton variant="minimal" />
-              </div>
-            </>
-          ) : (
+          {!user ? (
             <Link
               href="/login"
-              className="block bg-blue-600 text-white text-center py-3 rounded-xl font-medium"
+              className="bg-accent-600 text-white px-5 py-2 rounded-lg font-medium 
+            hover:bg-accent-700 hover:shadow-lg hover:shadow-accent-500/30 
+            active:scale-[0.97] transition-all duration-200"
             >
               Login
             </Link>
+          ) : (
+            <div className="flex items-center gap-3">
+              <ProfileDropdown email={email} avatarUrl={avatarUrl} />
+            </div>
           )}
-
         </div>
+
+        {/* MOBILE TOGGLE */}
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="md:hidden p-2 rounded-lg hover:bg-accent-50 active:scale-95 text-slate-600 transition"
+          aria-label="Toggle Menu"
+        >
+          {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+
       </div>
-    </header>
-  )
+    </div>
+
+    {/* MOBILE MENU */}
+    <div
+      className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${mobileOpen ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'
+        }`}
+    >
+      <div className="bg-white border-t border-slate-200 px-5 py-5 flex flex-col gap-1 shadow-inner">
+
+        {user && (
+          <div className="pb-4 mb-3 border-b border-slate-200">
+            <p className="text-xs uppercase tracking-wider text-accent-600 font-semibold mb-1">
+              Account
+            </p>
+            <p className="text-sm font-medium text-slate-900 truncate">
+              {email}
+            </p>
+          </div>
+        )}
+
+        <Link
+          href="/"
+          className={`block text-base font-medium py-2.5 px-3 rounded-md transition ${pathname === '/'
+              ? 'bg-accent-100 text-accent-700'
+              : 'text-slate-700 hover:bg-accent-50'
+            }`}
+        >
+          Home
+        </Link>
+
+        {navItems.map((item) => (
+          (!item.authRequired || user) && (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`block text-base font-medium py-2.5 px-3 rounded-md transition ${pathname === item.href
+                  ? 'bg-accent-100 text-accent-700'
+                  : 'text-slate-700 hover:bg-accent-50'
+                }`}
+            >
+              {item.name}
+            </Link>
+          )
+        ))}
+
+        {user ? (
+          <div className="pt-4 mt-3 border-t border-slate-200">
+            <LogoutButton variant="minimal" />
+          </div>
+        ) : (
+          <Link
+            href="/login"
+            className="block bg-accent-600 text-white text-center py-3 rounded-lg font-medium mt-4
+          hover:bg-accent-700 transition shadow-md"
+          >
+            Login
+          </Link>
+        )}
+      </div>
+    </div>
+  </header>)
 }

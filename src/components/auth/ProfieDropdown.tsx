@@ -2,7 +2,6 @@
 
 import { useState, useTransition, useRef, useEffect } from 'react'
 import { logoutAction } from '@/lib/auth/actions'
-import Link from 'next/link'
 
 interface ProfileDropdownProps {
   
@@ -101,7 +100,7 @@ export default function ProfileDropdown({
 
             </div>
 
-            {/* Links */}
+            {/* Links 
             <div className="pt-3 space-y-1">
 
               <Link
@@ -127,6 +126,8 @@ export default function ProfileDropdown({
               >
                 People
               </Link>
+              </div>
+              */}
 
               <button
                 onClick={() => {
@@ -138,7 +139,7 @@ export default function ProfileDropdown({
                 Logout
               </button>
 
-            </div>
+            
           </div>
         )}
       </div>
