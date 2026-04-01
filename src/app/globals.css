@@ -3,40 +3,44 @@
 @tailwind utilities;
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 0 0% 3.6%;
+  --background: 210 20% 98%; /* Slightly off-white for better contrast */
+  --foreground: 222 47% 11%;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: 0 0% 3.6%;
-    --foreground: 0 0% 98.2%;
+    --background: 222 47% 4%;
+    --foreground: 210 20% 98%;
   }
 }
 
 body {
   background: hsl(var(--background));
   color: hsl(var(--foreground));
+  -webkit-font-smoothing: antialiased;
 }
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors;
+    /* Added rounded-xl and subtle scale effect on hover */
+    @apply inline-flex items-center justify-center px-5 py-2.5 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 shadow-sm;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center px-4 py-2 bg-gray-200 text-gray-900 rounded-lg font-medium hover:bg-gray-300 transition-colors;
+    @apply inline-flex items-center justify-center px-5 py-2.5 bg-white text-gray-700 border border-gray-200 rounded-xl font-medium hover:bg-gray-50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 shadow-sm;
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors;
+    @apply inline-flex items-center justify-center px-5 py-2.5 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200;
   }
 
   .input-field {
-    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+    /* Increased rounding and softer border */
+    @apply w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all bg-white;
   }
 
   .card {
-    @apply bg-white rounded-lg shadow-md p-6;
+    /* Using the new 'soft' shadow and increased padding/rounding */
+    @apply bg-white rounded-2xl shadow-soft p-8 border border-gray-100/50;
   }
 }
