@@ -2,7 +2,6 @@
 
 import { useState, useTransition, useRef, useEffect } from 'react'
 import { logoutAction } from '@/lib/auth/actions'
-import Link from 'next/link'
 
 interface ProfileDropdownProps {
   
