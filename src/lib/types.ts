@@ -28,3 +28,16 @@ export interface Blog {
     avatar_url: string | null
   }
 }
+
+export interface GalleryItem {
+  id: string
+  title: string
+  description: string | null
+  image_url: string
+  uploaded_by: string
+  created_at: string
+  profile?: {
+    display_name: string
+    avatar_url: string | null
+  }
+}

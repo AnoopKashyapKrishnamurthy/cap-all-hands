@@ -80,6 +80,33 @@ export default async function DashboardPage() {
           </div>
         </div>
 
+        {/* Gallery */}
+        <div className="bg-white rounded-2xl shadow-sm border p-6 hover:shadow-md transition">
+          <h3 className="text-lg font-semibold mb-4">
+            Gallery
+          </h3>
+
+          <p className="text-gray-600 text-sm mb-5">
+            Create Posts and share photos with the team.
+          </p>
+
+          <div className="flex flex-col gap-3">
+            <Link
+              href="/gallery"
+              className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 transition text-center"
+            >
+              Browse Gallery
+            </Link>
+
+            <Link
+              href="/gallery/upload"
+              className="bg-green-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-green-700 transition text-center"
+            >
+              Create Post
+            </Link>
+          </div>
+        </div>
+
       </div>
 
       {/* Footer */}
