@@ -104,6 +104,33 @@ export default async function DashboardPage() {
             >
               Create Post
             </Link>
+            <Link href="/events" className="block text-lg font-medium py-2">
+              Events
+            </Link>
+          </div>
+        </div>
+
+        {/* Events Card */}
+        <div className="bg-white rounded-2xl shadow-sm border p-6 hover:shadow-md transition">
+          <h3 className="text-lg font-semibold mb-4">
+            🗓️ Events
+          </h3>
+          <p className="text-gray-600 text-sm mb-5">
+            Discover and join upcoming team events.
+          </p>
+          <div className="flex flex-col gap-3">
+            <Link
+              href="/events"
+              className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 transition text-center"
+            >
+              Browse Events
+            </Link>
+            <Link
+              href="/events/new"
+              className="bg-green-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-green-700 transition text-center"
+            >
+              Create Event
+            </Link>
           </div>
         </div>
 

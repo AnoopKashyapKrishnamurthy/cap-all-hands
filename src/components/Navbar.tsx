@@ -27,9 +27,10 @@ export default function Navbar({
   // Centralized nav items to manage links in one place
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', authRequired: true },
-    { name: 'People', href: '/people', authRequired: true },
+    { name: 'Events', href: '/events', authRequired: true },
     { name: 'Gallery', href: '/gallery', authRequired: true },
     { name: 'Blogs', href: '/blogs', authRequired: true },
+    { name: 'People', href: '/people', authRequired: true },
     { name: 'Profile', href: '/profile', authRequired: true },
   ]
 
