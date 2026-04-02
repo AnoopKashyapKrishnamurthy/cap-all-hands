@@ -13,11 +13,16 @@ export default async function DashboardPage() {
       title: 'Book Reviews',
       icon: '📚',
       size: 'lg',
-      desc: 'Browse community reviews or write your own. Discover what your teammates are reading.',
+      desc: 'Browse community reviews or write your own. Discover what your teammates are reading this month.',
       links: [
-        { href: '/reviews', label: 'Browse Reviews', color: 'blue' },
-        { href: '/reviews/new', label: 'Write a Review', color: 'green' },
+        { href: '/reviews', label: 'Browse Reviews' },
+        { href: '/reviews/new', label: 'Write a Review' },
       ],
+      recentReviews: [
+        { title: 'Designing Data-Intensive Apps', author: 'Martin Kleppmann', rating: '⭐⭐⭐⭐⭐', color: 'bg-indigo-100 text-indigo-700' },
+        { title: 'Atomic Habits', author: 'James Clear', rating: '⭐⭐⭐⭐', color: 'bg-orange-100 text-orange-700' },
+        { title: 'The Pragmatic Programmer', author: 'David Thomas', rating: '⭐⭐⭐⭐⭐', color: 'bg-emerald-100 text-emerald-700' },
+      ]
     },
     {
       title: 'Blogs',
@@ -25,8 +30,8 @@ export default async function DashboardPage() {
       size: 'md',
       desc: 'Share insights, updates, and ideas with the team.',
       links: [
-        { href: '/blogs', label: 'Browse Blogs', color: 'blue' },
-        { href: '/blogs/new', label: 'Create Blog', color: 'green' },
+        { href: '/blogs', label: 'Browse Blogs' },
+        { href: '/blogs/new', label: 'Create Blog' },
       ],
     },
     {
@@ -35,8 +40,8 @@ export default async function DashboardPage() {
       size: 'md',
       desc: 'Create posts and share photos with the team.',
       links: [
-        { href: '/gallery', label: 'Browse Gallery', color: 'blue' },
-        { href: '/gallery/upload', label: 'Create Post', color: 'green' },
+        { href: '/gallery', label: 'Browse Gallery' },
+        { href: '/gallery/upload', label: 'Create Post' },
       ],
     },
     {
@@ -45,11 +50,55 @@ export default async function DashboardPage() {
       size: 'wide',
       desc: 'Discover and join upcoming team events. Never miss a gathering.',
       links: [
-        { href: '/events', label: 'Browse Events', color: 'blue' },
-        { href: '/events/new', label: 'Create Event', color: 'green' },
+        { href: '/events', label: 'Browse Events' },
+        { href: '/events/new', label: 'Create Event' },
       ],
     },
   ]
+
+  // Reusable component for the new button style
+  // Define the shape of a single link
+  type LinkItem = {
+    href: string;
+    label: string;
+  };
+
+  // Reusable component for the new button style with TypeScript types
+  const CardActions = ({ links }: { links: LinkItem[] }) => (
+    <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 pt-6">
+      {links.map((link, idx) => {
+        const isPrimary = idx === 0;
+        return (
+          <Link
+            key={idx}
+            href={link.href}
+            className={`
+              group/link relative inline-flex items-center justify-center gap-2 
+              px-4 py-2.5 text-sm font-semibold transition-all duration-200 
+              rounded-xl active:scale-95
+              
+              ${isPrimary
+                ? 'bg-blue-600 text-white shadow-sm shadow-blue-200/50 hover:bg-blue-700 hover:shadow-md'
+                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+              }
+            `}
+          >
+            {link.label}
+            {!isPrimary && (
+              <svg
+                className="w-4 h-4 transition-transform duration-300 group-hover/link:translate-x-1"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            )}
+          </Link>
+        );
+      })}
+    </div>
+  );
 
   return (
     <section className="space-y-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -81,56 +130,90 @@ export default async function DashboardPage() {
               shadow-sm ring-1 ring-gray-900/5 transition-all duration-300
               hover:shadow-xl hover:-translate-y-1 hover:ring-gray-900/10
 
-              ${card.size === 'lg' ? 'md:col-span-2 md:row-span-2' : ''}
+              ${card.size === 'lg' ? 'md:col-span-2 md:row-span-2 bg-gradient-to-br from-white to-gray-50/50' : ''}
               ${card.size === 'wide' ? 'md:col-span-2' : ''}
               ${card.size === 'md' ? 'col-span-1' : ''}
             `}
           >
             {/* Ambient Background Icon for Large Cards */}
             {card.size === 'lg' && (
-              <div className="absolute -bottom-8 -right-8 text-[140px] opacity-[0.03] pointer-events-none transform transition-transform duration-700 group-hover:scale-110">
+              <div className="absolute -bottom-8 -left-8 text-[180px] opacity-[0.02] pointer-events-none transform transition-transform duration-700 group-hover:scale-110 group-hover:-rotate-6">
                 {card.icon}
               </div>
             )}
 
-            {/* Content Top */}
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="flex items-center justify-center w-12 h-12 rounded-2xl bg-gray-50 ring-1 ring-gray-900/5 text-2xl shadow-sm">
-                  {card.icon}
-                </span>
-                <h3 className="text-xl font-bold tracking-tight text-gray-900">
-                  {card.title}
-                </h3>
+            {/* CONDITIONAL RENDERING: Large Card vs Standard Cards */}
+            {card.size === 'lg' ? (
+
+              // --- SPLIT LAYOUT (Large Card Only) ---
+              <div className="relative z-10 flex flex-col lg:flex-row gap-8 h-full min-h-0">
+
+                {/* Left Side: Standard Info */}
+                <div className="flex flex-col justify-between flex-1">
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="flex items-center justify-center w-12 h-12 rounded-2xl bg-white ring-1 ring-gray-900/5 text-2xl shadow-sm">
+                        {card.icon}
+                      </span>
+                      <h3 className="text-2xl font-bold tracking-tight text-gray-900">
+                        {card.title}
+                      </h3>
+                    </div>
+                    <p className="text-gray-500 text-base leading-relaxed mb-8 max-w-sm">
+                      {card.desc}
+                    </p>
+                  </div>
+
+                  <CardActions links={card.links} />
+                </div>
+
+                {/* Right Side: Dynamic Content Injection */}
+                <div className="flex flex-col flex-1 bg-white/60 backdrop-blur-sm rounded-2xl p-5 ring-1 ring-gray-900/5 shadow-inner">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Trending Reads</h4>
+                    <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">This Week</span>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    {card.recentReviews?.map((book, j) => (
+                      <div key={j} className="flex items-center gap-4 p-3 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-default">
+                        {/* CSS Book Cover Graphic */}
+                        <div className={`w-10 h-14 rounded shadow-sm border border-black/5 flex-shrink-0 flex items-center justify-center text-xs font-serif ${book.color}`}>
+                          {book.title.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-gray-900 truncate">{book.title}</p>
+                          <p className="text-xs text-gray-500 truncate mb-1">{book.author}</p>
+                          <div className="text-[10px] tracking-widest">{book.rating}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
               </div>
+            ) : (
 
-              <p className="text-gray-500 text-sm sm:text-base leading-relaxed mb-6 max-w-sm">
-                {card.desc}
-              </p>
-            </div>
+              // --- STANDARD CARD LAYOUT (md & wide) ---
+              <div className="flex flex-col h-full relative z-10">
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="flex items-center justify-center w-12 h-12 rounded-2xl bg-gray-50 ring-1 ring-gray-900/5 text-2xl shadow-sm">
+                      {card.icon}
+                    </span>
+                    <h3 className="text-xl font-bold tracking-tight text-gray-900">
+                      {card.title}
+                    </h3>
+                  </div>
 
-            {/* Content Bottom (Buttons) */}
-            <div className={`relative z-10 mt-auto flex flex-col gap-3 ${card.size === 'md' ? '' : 'sm:flex-row'}`}>
-              {card.links.map((link, idx) => (
-                <Link
-                  key={idx}
-                  href={link.href}
-                  className={`
-                    inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold rounded-xl
-                    transition-all duration-200 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
-                    
-                    ${
-                      link.color === 'blue'
-                        ? 'bg-blue-600 text-white shadow-sm hover:bg-blue-500 focus-visible:outline-blue-600'
-                        : 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200/60 hover:bg-emerald-100 hover:text-emerald-800'
-                    }
-                    ${card.size === 'md' ? 'w-full' : 'w-full sm:w-auto'}
-                  `}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
+                  <p className="text-gray-500 text-sm sm:text-base leading-relaxed mb-6 max-w-sm">
+                    {card.desc}
+                  </p>
+                </div>
+
+                <CardActions links={card.links} />
+              </div>
+            )}
 
           </div>
         ))}
