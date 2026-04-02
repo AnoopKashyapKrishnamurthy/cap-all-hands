@@ -104,9 +104,6 @@ export default async function DashboardPage() {
             >
               Create Post
             </Link>
-            <Link href="/events" className="block text-lg font-medium py-2">
-              Events
-            </Link>
           </div>
         </div>
 
