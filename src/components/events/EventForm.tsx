@@ -253,6 +253,17 @@ export default function EventForm({ event }: EventFormProps) {
                 />
             </div>
 
+            <div>
+                <label className="block text-sm font-medium mb-2">Location</label>
+                <input
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="e.g. Alpha / Nilgiri / Virtual"
+                />
+            </div>
+
             {/* Host */}
             <div>
                 <label className="block text-sm font-medium mb-2">
