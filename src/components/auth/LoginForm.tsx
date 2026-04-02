@@ -4,12 +4,15 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { Eye, EyeOff } from 'lucide-react'
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false);
+  
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -32,7 +35,7 @@ export default function LoginForm() {
       }
 
       router.push('/dashboard');
-      router.refresh();
+
     } catch {
       setError('An unexpected error occurred. Please try again.');
       setLoading(false);
@@ -73,16 +76,34 @@ export default function LoginForm() {
         >
           Password
         </label>
-        <input
-          id="password"
-          type="password"
-          required
-          disabled={loading}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="input-field disabled:bg-gray-100 disabled:cursor-not-allowed"
-          placeholder="********"
-        />
+
+        <div className="relative">
+          <input
+            id="password"
+            type={showPassword ? 'text' : 'password'}
+            required
+            disabled={loading}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="input-field pr-10 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            placeholder="********"
+          />
+
+          {/* Eye Icon */}
+          <button
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700 transition active:scale-95"
+            tabIndex={-1}
+          >
+            {showPassword ? (
+              <EyeOff className="w-5 h-5" />
+            ) : (
+              <Eye className="w-5 h-5" />
+            )}
+          </button>
+        </div>
+
         <div className="mt-2 text-right">
           <Link
             href="/forgot-password"

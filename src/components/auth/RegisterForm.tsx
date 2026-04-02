@@ -62,6 +62,7 @@ export default function RegisterForm() {
       }
 
       setSuccess(true);
+      setLoading(false);
       setEmail('');
       setPassword('');
       setConfirmPassword('');
