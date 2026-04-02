@@ -18,81 +18,12 @@ export default function ResetPasswordForm() {
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState<'loading' | 'valid' | 'invalid'>('loading')
 
+  // src/components/auth/ResetPasswordForm.tsx
+
   useEffect(() => {
-    let cancelled = false
-    let intervalId: ReturnType<typeof setInterval> | null = null
-    let timeoutId: ReturnType<typeof setTimeout> | null = null
-
-    const cleanupTimers = () => {
-      if (intervalId) clearInterval(intervalId)
-      if (timeoutId) clearTimeout(timeoutId)
-    }
-
-    // Recovery links can take a few seconds while the hash token is processed.
-    // We listen for auth events and poll briefly before declaring the link invalid.
-    const initialize = async () => {
-      const setValid = () => {
-        if (cancelled) return
-        setStatus('valid')
-        cleanupTimers()
-      }
-
-      const setInvalid = () => {
-        if (cancelled) return
-        setStatus('invalid')
-        cleanupTimers()
-      }
-
-      const hasSession = async () => {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
-        return !!session
-      }
-
-      if (await hasSession()) {
-        setValid()
-        return
-      }
-
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange((event, session) => {
-        if (
-          session &&
-          (event === 'PASSWORD_RECOVERY' ||
-            event === 'SIGNED_IN' ||
-            event === 'TOKEN_REFRESHED')
-        ) {
-          setValid()
-        }
-      })
-
-      intervalId = setInterval(async () => {
-        if (await hasSession()) {
-          setValid()
-        }
-      }, 400)
-
-      timeoutId = setTimeout(() => {
-        setInvalid()
-      }, 10000)
-
-      return () => {
-        subscription.unsubscribe()
-      }
-    }
-
-    let unsubscribe: (() => void) | undefined
-    initialize().then((fn) => {
-      unsubscribe = fn
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setStatus(session ? 'valid' : 'invalid')
     })
-
-    return () => {
-      cancelled = true
-      cleanupTimers()
-      if (unsubscribe) unsubscribe()
-    }
   }, [supabase])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -127,8 +58,8 @@ export default function ResetPasswordForm() {
         router.push('/login?message=Your password has been updated. Please sign in with your new password.')
         router.refresh()
       })
-    } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred.')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred.')
       setLoading(false)
     }
   }
