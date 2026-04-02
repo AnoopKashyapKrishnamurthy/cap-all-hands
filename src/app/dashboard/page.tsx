@@ -57,7 +57,14 @@ export default async function DashboardPage() {
   ]
 
   // Reusable component for the new button style
-  const CardActions = ({ links }) => (
+  // Define the shape of a single link
+  type LinkItem = {
+    href: string;
+    label: string;
+  };
+
+  // Reusable component for the new button style with TypeScript types
+  const CardActions = ({ links }: { links: LinkItem[] }) => (
     <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 pt-6">
       {links.map((link, idx) => {
         const isPrimary = idx === 0;
@@ -70,18 +77,18 @@ export default async function DashboardPage() {
               px-4 py-2.5 text-sm font-semibold transition-all duration-200 
               rounded-xl active:scale-95
               
-              ${isPrimary 
-                ? 'bg-blue-600 text-white shadow-sm shadow-blue-200/50 hover:bg-blue-700 hover:shadow-md' 
+              ${isPrimary
+                ? 'bg-blue-600 text-white shadow-sm shadow-blue-200/50 hover:bg-blue-700 hover:shadow-md'
                 : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
               }
             `}
           >
             {link.label}
             {!isPrimary && (
-              <svg 
-                className="w-4 h-4 transition-transform duration-300 group-hover/link:translate-x-1" 
-                fill="none" 
-                viewBox="0 0 24 24" 
+              <svg
+                className="w-4 h-4 transition-transform duration-300 group-hover/link:translate-x-1"
+                fill="none"
+                viewBox="0 0 24 24"
                 stroke="currentColor"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -137,10 +144,10 @@ export default async function DashboardPage() {
 
             {/* CONDITIONAL RENDERING: Large Card vs Standard Cards */}
             {card.size === 'lg' ? (
-              
+
               // --- SPLIT LAYOUT (Large Card Only) ---
               <div className="relative z-10 flex flex-col lg:flex-row gap-8 h-full min-h-0">
-                
+
                 {/* Left Side: Standard Info */}
                 <div className="flex flex-col justify-between flex-1">
                   <div>
@@ -156,7 +163,7 @@ export default async function DashboardPage() {
                       {card.desc}
                     </p>
                   </div>
-                  
+
                   <CardActions links={card.links} />
                 </div>
 
@@ -166,7 +173,7 @@ export default async function DashboardPage() {
                     <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Trending Reads</h4>
                     <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">This Week</span>
                   </div>
-                  
+
                   <div className="flex flex-col gap-3">
                     {card.recentReviews?.map((book, j) => (
                       <div key={j} className="flex items-center gap-4 p-3 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-default">
@@ -186,7 +193,7 @@ export default async function DashboardPage() {
 
               </div>
             ) : (
-              
+
               // --- STANDARD CARD LAYOUT (md & wide) ---
               <div className="flex flex-col h-full relative z-10">
                 <div>
