@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { protectRoute } from '@/lib/auth'
 import EventForm from '@/components/events/EventForm'
+import EventSectionsManager from '@/components/events/EventSectionsManager'
 
 interface EditEventPageProps {
   params: Promise<{ id: string }>
@@ -35,6 +36,8 @@ export default async function EditEventPage({ params }: EditEventPageProps) {
 
       <div className="bg-white rounded-2xl shadow-sm border p-8 sm:p-10">
         <EventForm event={event} />
+        {/* EVENT SECTION MANAGER  */}
+        <EventSectionsManager eventId={event.id} />
       </div>
     </section>
   )
