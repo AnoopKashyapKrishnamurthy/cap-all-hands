@@ -53,7 +53,7 @@ export default async function EventsPage() {
       .from('interactions')
       .select('target_id, interaction_type')
       .eq('user_id', user.id)
-      .eq('target_type', 'event')
+      .eq('target_type', 'events')
       .in('target_id', allEventIds)
 
     userInteractions = interactionsData ?? []

@@ -42,7 +42,7 @@ export default function EventComments({
       .insert({
         user_id: currentUserId,
         target_id: eventId,
-        target_type: 'event',
+        target_type: 'events',
         interaction_type: 'comment',
         payload: { text: text.trim() },
       })

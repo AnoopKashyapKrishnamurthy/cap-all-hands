@@ -43,7 +43,7 @@ export interface GalleryItem {
 }
 
 export type InteractionType = 'like' | 'participant' | 'host' | 'comment'
-export type TargetType = 'event' | 'blog' | 'review' // extend as needed
+export type TargetType = 'events' | 'blog' | 'review' // extend as needed
 
 export interface Event {
   id: string

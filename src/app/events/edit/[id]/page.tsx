@@ -26,19 +26,47 @@ export default async function EditEventPage({ params }: EditEventPageProps) {
   if (event.creator_id !== user.id) notFound()
 
   return (
-    <section className="max-w-2xl mx-auto space-y-10 py-10 px-6">
-      <div className="space-y-2">
-        <Link href={`/events/${event.id}`} className="text-sm text-blue-600 hover:underline">
-          ← Back to Event
-        </Link>
-        <h1 className="text-3xl font-bold tracking-tight">Edit Event</h1>
+    <section className="max-w-5xl mx-auto py-10 px-4 sm:px-6 space-y-8">
+
+      {/* HEADER */}
+      <div className="flex items-center justify-between">
+        <div>
+          <Link
+            href={`/events/${event.id}`}
+            className="text-sm text-blue-600 hover:underline"
+          >
+            ← Back to Event
+          </Link>
+
+          <h1 className="text-3xl font-bold tracking-tight mt-2">
+            Edit Event
+          </h1>
+
+          <p className="text-sm text-gray-500">
+            Update event details and manage sections
+          </p>
+        </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border p-8 sm:p-10">
+      {/* EVENT DETAILS CARD */}
+      <div className="bg-white rounded-2xl shadow-sm border p-6 sm:p-8 space-y-6">
+        <div className="border-b pb-4">
+          <h2 className="text-xl font-semibold">Event Details</h2>
+          <p className="text-sm text-gray-500">
+            Update title, description, date, and location
+          </p>
+        </div>
+
         <EventForm event={event} />
-        {/* EVENT SECTION MANAGER  */}
+      </div>
+
+      {/* EVENT SECTIONS CARD */}
+      <div className="bg-white rounded-2xl shadow-sm border p-6 sm:p-8 space-y-6">
+        
+
         <EventSectionsManager eventId={event.id} />
       </div>
+
     </section>
   )
 }

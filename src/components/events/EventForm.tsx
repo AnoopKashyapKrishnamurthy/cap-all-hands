@@ -130,31 +130,39 @@ export default function EventForm({ event }: EventFormProps) {
 
                 if (updateError) throw updateError
 
-                // Update Hosts: Delete old hosts, insert new ones
-                const { error: deleteHostsError } = await supabase
+                
+
+
+
+                const {  error: deletehostsError } = await supabase
                     .from('interactions')
                     .delete()
                     .eq('target_id', event!.id)
                     .eq('target_type', 'events')
                     .eq('interaction_type', 'host')
+                if (deletehostsError) throw deletehostsError
 
-                if (deleteHostsError) throw deleteHostsError
-
+                // STEP 2: INSERT FRESH HOSTS
                 if (hosts.length > 0) {
-                    const hostRows = hosts.map((hostId) => ({
+                    const uniqueHosts = Array.from(
+                        new Map(hosts.map(h => [h, h])).values()
+                    )
+
+
+
+                    const hostRows = uniqueHosts.map((hostId) => ({
                         user_id: hostId,
                         target_id: event!.id,
                         target_type: 'events',
                         interaction_type: 'host'
                     }))
 
-                    const { error: hostInsertError } = await supabase
+                    const { error: insertError } = await supabase
                         .from('interactions')
                         .insert(hostRows)
 
-                    if (hostInsertError) throw hostInsertError
+                    if (insertError) throw insertError
                 }
-
                 router.push(`/events/${event!.id}`)
             } else {
                 // Insert New Event
@@ -176,25 +184,26 @@ export default function EventForm({ event }: EventFormProps) {
 
                 // Insert Hosts
                 if (hosts.length > 0) {
-                    const hostRows = hosts.map((hostId) => ({
+                    const uniqueHosts = [...new Set(hosts)]
+
+                    const hostRows = uniqueHosts.map((hostId) => ({
                         user_id: hostId,
                         target_id: eventData.id,
                         target_type: 'events',
                         interaction_type: 'host'
                     }))
 
-                    const { error: hostError } = await supabase
+                    const { error: hostInsertError } = await supabase
                         .from('interactions')
                         .insert(hostRows)
 
-                    if (hostError) throw hostError
+                    if (hostInsertError) throw hostInsertError
                 }
             }
 
             router.refresh()
-            router.push('/events')
+
         } catch (err: any) {
-            console.log('FULL ERROR:', err)
 
             if (err?.message) {
                 console.error('MESSAGE:', err.message)
@@ -320,11 +329,12 @@ export default function EventForm({ event }: EventFormProps) {
                                         if (isSelected) {
                                             setHosts(hosts.filter(id => id !== user.id))
                                         } else {
-                                            setHosts(prev =>
-                                                prev.includes(user.id)
-                                                    ? prev.filter(id => id !== user.id)
-                                                    : [...prev, user.id]
-                                            )
+                                            setHosts(prev => {
+                                                if (prev.includes(user.id)) {
+                                                    return prev.filter(id => id !== user.id)
+                                                }
+                                                return [...new Set([...prev, user.id])]
+                                            })
                                         }
                                     }}
                                     className={`px-4 py-2 cursor-pointer hover:bg-gray-100 flex justify-between ${isSelected ? 'bg-blue-50' : ''

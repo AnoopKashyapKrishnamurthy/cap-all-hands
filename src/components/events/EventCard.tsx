@@ -24,14 +24,9 @@ export default function EventCard({
   const router = useRouter()
   const supabase = createClient()
 
-  const [liked, setLiked] = useState(false)
-  const [joined, setJoined] = useState(false)
-
-  useEffect(() => {
-    setLiked(initialLiked)
-    setJoined(initialJoined)
-  }, [initialLiked, initialJoined])
-
+  // Fix: initialize directly from props, no flicker
+  const [liked, setLiked] = useState(initialLiked)
+  const [joined, setJoined] = useState(initialJoined)
   const [likeLoading, setLikeLoading] = useState(false)
   const [joinLoading, setJoinLoading] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -47,54 +42,34 @@ export default function EventCard({
 
   useEffect(() => {
     const eventDate = new Date(event.event_date)
-
     setFormattedDate(
       eventDate.toLocaleDateString(undefined, {
-        weekday: 'short',
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
+        weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
       })
     )
-
     setFormattedTime(
-      eventDate.toLocaleTimeString(undefined, {
-        hour: '2-digit',
-        minute: '2-digit',
-      })
+      eventDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
     )
   }, [event.event_date])
 
   const toggleLike = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-
-    if (likeLoading || isPast) return
+    if (likeLoading) return
     setLikeLoading(true)
-
     try {
       if (liked) {
-        const { error } = await supabase
-          .from('interactions')
-          .delete()
-          .eq('user_id', currentUserId)
-          .eq('target_id', event.id)
-          .eq('target_type', 'events')
-          .eq('interaction_type', 'like')
-
-        if (!error) setLiked(false)
+        await supabase.from('interactions').delete()
+          .eq('user_id', currentUserId).eq('target_id', event.id)
+          .eq('target_type', 'events').eq('interaction_type', 'like')
+        setLiked(false)
       } else {
-        const { error } = await supabase.from('interactions').insert({
-          user_id: currentUserId,
-          target_id: event.id,
-          target_type: 'events',
-          interaction_type: 'like',
+        await supabase.from('interactions').insert({
+          user_id: currentUserId, target_id: event.id,
+          target_type: 'events', interaction_type: 'like',
         })
-
-        if (!error) setLiked(true)
+        setLiked(true)
       }
-    } catch (err) {
-      console.error(err)
     } finally {
       setLikeLoading(false)
     }
@@ -103,33 +78,21 @@ export default function EventCard({
   const toggleJoin = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-
     if (joinLoading || isPast) return
     setJoinLoading(true)
-
     try {
       if (joined) {
-        const { error } = await supabase
-          .from('interactions')
-          .delete()
-          .eq('user_id', currentUserId)
-          .eq('target_id', event.id)
-          .eq('target_type', 'events')
-          .eq('interaction_type', 'participant')
-
-        if (!error) setJoined(false)
+        await supabase.from('interactions').delete()
+          .eq('user_id', currentUserId).eq('target_id', event.id)
+          .eq('target_type', 'events').eq('interaction_type', 'participant')
+        setJoined(false)
       } else {
-        const { error } = await supabase.from('interactions').insert({
-          user_id: currentUserId,
-          target_id: event.id,
-          target_type: 'events',
-          interaction_type: 'participant',
+        await supabase.from('interactions').insert({
+          user_id: currentUserId, target_id: event.id,
+          target_type: 'events', interaction_type: 'participant',
         })
-
-        if (!error) setJoined(true)
+        setJoined(true)
       }
-    } catch (err) {
-      console.error(err)
     } finally {
       setJoinLoading(false)
     }
@@ -138,15 +101,10 @@ export default function EventCard({
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-
     setDeleting(true)
-
     try {
       await supabase.from('events').delete().eq('id', event.id)
-      router.push('/events')
       router.refresh()
-    } catch (err) {
-      console.error(err)
     } finally {
       setDeleting(false)
     }
@@ -155,90 +113,85 @@ export default function EventCard({
   return (
     <div
       onClick={() => router.push(`/events/${event.id}`)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') router.push(`/events/${event.id}`)
-      }}
       tabIndex={0}
-      className={`cursor-pointer bg-white rounded-2xl border shadow-sm hover:shadow-md transition flex flex-col h-full overflow-hidden ${isPast ? 'grayscale' : ''}`}
+      onKeyDown={(e) => { if (e.key === 'Enter') router.push(`/events/${event.id}`) }}
+      className={`cursor-pointer bg-white rounded-2xl border shadow-sm hover:shadow-md transition-all duration-200 flex flex-col h-full overflow-hidden ${isPast ? 'opacity-60' : ''}`}
     >
-      {/* Image */}
-      <div className="h-40 w-full overflow-hidden bg-gradient-to-br from-blue-500 to-indigo-600">
+      <div className="h-44 w-full overflow-hidden bg-gradient-to-br from-blue-500 to-indigo-600 flex-shrink-0">
         {event.image_url ? (
-          <img
-            src={event.image_url}
-            alt={event.title}
-            className="h-full w-full object-cover"
-          />
+          <img src={event.image_url} alt={event.title}
+            className="h-full w-full object-cover hover:scale-105 transition-transform duration-500" />
         ) : (
-          <div className="h-full w-full flex items-center justify-center text-white text-xl font-semibold px-4 text-center">
+          <div className="h-full w-full flex items-center justify-center text-white text-lg font-semibold px-6 text-center">
             {event.title}
           </div>
         )}
       </div>
 
-      {/* Body */}
       <div className="flex flex-col flex-1 p-5 space-y-3">
-        <h3 className="font-semibold text-gray-900 text-lg line-clamp-2">
+        {isPast && (
+          <span className="inline-block self-start text-xs font-medium bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+            Past event
+          </span>
+        )}
+
+        <h3 className="font-semibold text-gray-900 text-base leading-snug line-clamp-2">
           {event.title}
         </h3>
 
         {event.description && (
-          <p className="text-sm text-gray-600 line-clamp-2">
+          <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">
             {event.description}
           </p>
         )}
 
-        {/* Date */}
         <div className="text-sm text-gray-500 space-y-1">
-          <p>📅 {formattedDate || 'Loading...'} · {formattedTime}</p>
-          {event.location && <p>📍 {event.location}</p>}
+          <p className="flex items-center gap-1.5">
+            <span>📅</span>
+            <span>{formattedDate || '—'} · {formattedTime}</span>
+          </p>
+          {event.location && (
+            <p className="flex items-center gap-1.5">
+              <span>📍</span>
+              <span className="truncate">{event.location}</span>
+            </p>
+          )}
         </div>
 
-        {/* Author */}
         <div className="flex items-center gap-2 pt-1">
           {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt={displayName}
-              className="h-7 w-7 rounded-full object-cover"
-            />
+            <img src={avatarUrl} alt={displayName} className="h-6 w-6 rounded-full object-cover" />
           ) : (
-            <div className="h-7 w-7 rounded-full bg-indigo-500 text-white flex items-center justify-center text-xs font-semibold">
+            <div className="h-6 w-6 rounded-full bg-indigo-500 text-white flex items-center justify-center text-xs font-semibold flex-shrink-0">
               {initial}
             </div>
           )}
-          <span className="text-xs text-gray-500">{displayName}</span>
+          <span className="text-xs text-gray-400 truncate">{displayName}</span>
         </div>
 
-        {/* Actions */}
         <div
-          className="flex items-center gap-3 pt-2 border-t mt-auto"
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-          }}
+          className="flex items-center gap-2 pt-3 border-t mt-auto"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
         >
-          {/* Like */}
           <button
             onClick={toggleLike}
-            disabled={likeLoading || isPast}
-            className={`flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg transition ${
+            disabled={likeLoading}
+            className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
               liked
-                ? 'bg-red-50 text-red-500'
+                ? 'bg-red-50 text-red-500 hover:bg-red-100'
                 : 'text-gray-500 hover:bg-gray-100'
             } disabled:opacity-50`}
           >
             {liked ? '❤️' : '🤍'} Like
           </button>
 
-          {/* Join */}
           {!isPast && (
             <button
               onClick={toggleJoin}
               disabled={joinLoading}
-              className={`flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg transition ${
+              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
                 joined
-                  ? 'bg-green-50 text-green-600'
+                  ? 'bg-green-50 text-green-600 hover:bg-green-100'
                   : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
               } disabled:opacity-50`}
             >
@@ -246,36 +199,38 @@ export default function EventCard({
             </button>
           )}
 
-          {/* Owner */}
           {isOwner && (
-            <div className="ml-auto flex gap-2">
+            <div className="ml-auto flex items-center gap-2">
               <Link
                 href={`/events/edit/${event.id}`}
                 onClick={(e) => e.stopPropagation()}
-                className="text-xs text-gray-500 hover:underline"
+                className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
               >
                 Edit
               </Link>
-
               {!confirming ? (
                 <button
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    setConfirming(true)
-                  }}
-                  className="text-xs text-red-500 hover:underline"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirming(true) }}
+                  className="text-xs text-red-400 hover:text-red-600 transition-colors"
                 >
                   Delete
                 </button>
               ) : (
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="text-xs text-red-600 font-medium"
-                >
-                  {deleting ? 'Deleting...' : 'Confirm'}
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="text-xs text-red-600 font-medium disabled:opacity-50"
+                  >
+                    {deleting ? 'Deleting…' : 'Confirm'}
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setConfirming(false) }}
+                    className="text-xs text-gray-400"
+                  >
+                    Cancel
+                  </button>
+                </div>
               )}
             </div>
           )}
