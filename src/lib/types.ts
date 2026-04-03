@@ -71,3 +71,36 @@ export interface Interaction {
   payload: Record<string, unknown>
   created_at: string
 }
+
+
+
+export interface EventSection {
+  id: string
+  event_id: string
+  section_type: string
+  title: string | null
+  content: any | null // Represents the JSONB content
+  display_order: number
+  is_visible: boolean
+  created_at: string
+  updated_at: string
+}
+
+// Update your existing Event interface to optionally include sections
+export interface Event {
+  id: string
+  creator_id: string
+  title: string
+  description: string | null
+  event_date: string
+  location: string | null
+  image_url: string | null
+  image_storage_path: string | null
+  created_at: string
+  updated_at: string
+  profile?: {
+    display_name: string
+    avatar_url: string | null
+  }
+  event_sections?: EventSection[] // Added this line
+}

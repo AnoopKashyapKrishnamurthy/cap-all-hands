@@ -24,7 +24,9 @@ export default async function EventPage({ params }: EventPageProps) {
       profile:user_profiles (
         display_name,
         avatar_url
-      )
+      ),
+    
+          event_sections (*)
     `)
         .eq('id', id)
         .single()
@@ -134,6 +136,10 @@ export default async function EventPage({ params }: EventPageProps) {
     // =========================
     // UI HELPERS
     // =========================
+
+    const activeSections = (event.event_sections || [])
+        .filter((sec: any) => sec.is_visible)
+        .sort((a: any, b: any) => a.display_order - b.display_order)
     const isPast = new Date(event.event_date) < new Date()
 
     const eventDate = new Date(event.event_date)
@@ -253,6 +259,55 @@ export default async function EventPage({ params }: EventPageProps) {
                             )
                         })}
                     </div>
+                </div>
+            )}
+
+            {/* Dynamic Event Sections */}
+            {/* Dynamic Event Sections */}
+            {activeSections.length > 0 && (
+                <div className="space-y-8 mt-10">
+                    {activeSections.map((section: any) => {
+                        // Determine how to render content based on what's inside the JSON
+                        const hasTextContent = section.content?.text;
+                        const hasHtmlContent = section.content?.html;
+                        const isArrayContent = Array.isArray(section.content);
+
+                        return (
+                            <div key={section.id} className="bg-white rounded-2xl p-6 border shadow-sm">
+                                {section.title && (
+                                    <h2 className="text-xl font-bold mb-4">{section.title}</h2>
+                                )}
+
+                                {/* 1. Render Known/Standard Formats First */}
+                                {section.section_type === 'agenda' && isArrayContent ? (
+                                    <div className="space-y-3">
+                                        {section.content.map((item: any, idx: number) => (
+                                            <div key={idx} className="border-l-2 border-blue-500 pl-4 py-1">
+                                                <p className="font-semibold">{item.time} - {item.title}</p>
+                                                {item.description && <p className="text-sm text-gray-600">{item.description}</p>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : hasTextContent ? (
+                                    /* 2. Generic Text Content Fallback */
+                                    <div className="text-gray-700 whitespace-pre-wrap">
+                                        {section.content.text}
+                                    </div>
+                                ) : hasHtmlContent ? (
+                                    /* 3. Generic HTML Content Fallback (Ensure you trust the input or sanitize it!) */
+                                    <div
+                                        className="text-gray-700 prose max-w-none"
+                                        dangerouslySetInnerHTML={{ __html: section.content.html }}
+                                    />
+                                ) : (
+                                    /* 4. Ultimate Fallback for Custom/Unknown JSON types */
+                                    <pre className="text-xs bg-gray-50 p-4 rounded-xl overflow-auto text-gray-800">
+                                        {JSON.stringify(section.content, null, 2)}
+                                    </pre>
+                                )}
+                            </div>
+                        )
+                    })}
                 </div>
             )}
 
