@@ -27,22 +27,15 @@ export default function EventInteractions({
   const toggleLike = async () => {
     if (likeLoading) return
     setLikeLoading(true)
-
     if (liked) {
-      await supabase
-        .from('interactions')
-        .delete()
-        .eq('user_id', currentUserId)
-        .eq('target_id', eventId)
-        .eq('target_type', 'event')
-        .eq('interaction_type', 'like')
+      await supabase.from('interactions').delete()
+        .eq('user_id', currentUserId).eq('target_id', eventId)
+        .eq('target_type', 'events').eq('interaction_type', 'like')
       setLiked(false)
     } else {
       await supabase.from('interactions').insert({
-        user_id: currentUserId,
-        target_id: eventId,
-        target_type: 'event',
-        interaction_type: 'like',
+        user_id: currentUserId, target_id: eventId,
+        target_type: 'events', interaction_type: 'like',
       })
       setLiked(true)
     }
@@ -52,22 +45,15 @@ export default function EventInteractions({
   const toggleJoin = async () => {
     if (joinLoading || isPast) return
     setJoinLoading(true)
-
     if (joined) {
-      await supabase
-        .from('interactions')
-        .delete()
-        .eq('user_id', currentUserId)
-        .eq('target_id', eventId)
-        .eq('target_type', 'event')
-        .eq('interaction_type', 'participant')
+      await supabase.from('interactions').delete()
+        .eq('user_id', currentUserId).eq('target_id', eventId)
+        .eq('target_type', 'events').eq('interaction_type', 'participant')
       setJoined(false)
     } else {
       await supabase.from('interactions').insert({
-        user_id: currentUserId,
-        target_id: eventId,
-        target_type: 'event',
-        interaction_type: 'participant',
+        user_id: currentUserId, target_id: eventId,
+        target_type: 'events', interaction_type: 'participant',
       })
       setJoined(true)
     }
@@ -75,30 +61,32 @@ export default function EventInteractions({
   }
 
   return (
-    <div className="flex gap-4">
+    <div className="flex flex-wrap gap-3">
       <button
         onClick={toggleLike}
         disabled={likeLoading}
-        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition ${
+        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition-all ${
           liked
-            ? 'bg-red-50 text-red-500 border border-red-200'
+            ? 'bg-red-50 text-red-500 border border-red-200 hover:bg-red-100'
             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-        } disabled:opacity-50`}
+        } disabled:opacity-50 disabled:cursor-not-allowed`}
       >
-        {liked ? '❤️ Liked' : '🤍 Like'}
+        <span>{liked ? '❤️' : '🤍'}</span>
+        {liked ? 'Liked' : 'Like'}
       </button>
 
       {!isPast && (
         <button
           onClick={toggleJoin}
           disabled={joinLoading}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition-all ${
             joined
-              ? 'bg-green-50 text-green-600 border border-green-200'
+              ? 'bg-green-50 text-green-600 border border-green-200 hover:bg-green-100'
               : 'bg-blue-600 text-white hover:bg-blue-700'
-          } disabled:opacity-50`}
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          {joined ? '✅ Joined! (Leave?)' : '+ Join Event'}
+          <span>{joined ? '✅' : '+'}</span>
+          {joined ? 'Joined — leave?' : 'Join event'}
         </button>
       )}
     </div>
