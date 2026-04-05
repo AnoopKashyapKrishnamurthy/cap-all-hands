@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
 import { protectRoute } from '@/lib/auth'
 
 export const metadata = {
@@ -7,6 +8,25 @@ export const metadata = {
 
 export default async function DashboardPage() {
   const user = await protectRoute()
+  const supabase = await createClient()
+
+  const { data: latestReviews } = await supabase
+    .from('book_reviews')
+    .select(`
+    id,
+    review_title,
+    book_title,
+    book_author,
+    rating,
+    profile:user_profiles (
+      display_name,
+      avatar_url,
+      email
+    )
+  `)
+    .order('created_at', { ascending: false })
+    .limit(4)
+  const safeReviews = latestReviews ?? []
 
   const cards = [
     {
@@ -18,11 +38,6 @@ export default async function DashboardPage() {
         { href: '/reviews', label: 'Browse Reviews' },
         { href: '/reviews/new', label: 'Write a Review' },
       ],
-      recentReviews: [
-        { title: 'Designing Data-Intensive Apps', author: 'Martin Kleppmann', rating: '⭐⭐⭐⭐⭐', color: 'bg-indigo-100 text-indigo-700' },
-        { title: 'Atomic Habits', author: 'James Clear', rating: '⭐⭐⭐⭐', color: 'bg-orange-100 text-orange-700' },
-        { title: 'The Pragmatic Programmer', author: 'David Thomas', rating: '⭐⭐⭐⭐⭐', color: 'bg-emerald-100 text-emerald-700' },
-      ]
     },
     {
       title: 'Blogs',
@@ -56,18 +71,15 @@ export default async function DashboardPage() {
     },
   ]
 
-  // Reusable component for the new button style
-  // Define the shape of a single link
   type LinkItem = {
-    href: string;
-    label: string;
-  };
+    href: string
+    label: string
+  }
 
-  // Reusable component for the new button style with TypeScript types
   const CardActions = ({ links }: { links: LinkItem[] }) => (
     <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 pt-6">
       {links.map((link, idx) => {
-        const isPrimary = idx === 0;
+        const isPrimary = idx === 0
         return (
           <Link
             key={idx}
@@ -95,10 +107,10 @@ export default async function DashboardPage() {
               </svg>
             )}
           </Link>
-        );
+        )
       })}
     </div>
-  );
+  )
 
   return (
     <section className="space-y-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -118,7 +130,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Modern Bento Grid */}
+      {/* Bento Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[minmax(240px,auto)] grid-flow-row-dense">
 
         {cards.map((card, i) => (
@@ -132,23 +144,20 @@ export default async function DashboardPage() {
 
               ${card.size === 'lg' ? 'md:col-span-2 md:row-span-2 bg-gradient-to-br from-white to-gray-50/50' : ''}
               ${card.size === 'wide' ? 'md:col-span-2' : ''}
-              ${card.size === 'md' ? 'col-span-1' : ''}
             `}
           >
-            {/* Ambient Background Icon for Large Cards */}
+
+            {/* Ambient Icon */}
             {card.size === 'lg' && (
               <div className="absolute -bottom-8 -left-8 text-[180px] opacity-[0.02] pointer-events-none transform transition-transform duration-700 group-hover:scale-110 group-hover:-rotate-6">
                 {card.icon}
               </div>
             )}
 
-            {/* CONDITIONAL RENDERING: Large Card vs Standard Cards */}
             {card.size === 'lg' ? (
+              <div className="relative z-10 flex flex-col lg:flex-row gap-8 h-full">
 
-              // --- SPLIT LAYOUT (Large Card Only) ---
-              <div className="relative z-10 flex flex-col lg:flex-row gap-8 h-full min-h-0">
-
-                {/* Left Side: Standard Info */}
+                {/* LEFT */}
                 <div className="flex flex-col justify-between flex-1">
                   <div>
                     <div className="flex items-center gap-3 mb-4">
@@ -167,34 +176,86 @@ export default async function DashboardPage() {
                   <CardActions links={card.links} />
                 </div>
 
-                {/* Right Side: Dynamic Content Injection */}
+                {/* RIGHT → REAL REVIEWS */}
                 <div className="flex flex-col flex-1 bg-white/60 backdrop-blur-sm rounded-2xl p-5 ring-1 ring-gray-900/5 shadow-inner">
+
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Trending Reads</h4>
-                    <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">This Week</span>
+                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Latest Reviews
+                    </h4>
+                    <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                      Live
+                    </span>
                   </div>
 
                   <div className="flex flex-col gap-3">
-                    {card.recentReviews?.map((book, j) => (
-                      <div key={j} className="flex items-center gap-4 p-3 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-default">
-                        {/* CSS Book Cover Graphic */}
-                        <div className={`w-10 h-14 rounded shadow-sm border border-black/5 flex-shrink-0 flex items-center justify-center text-xs font-serif ${book.color}`}>
-                          {book.title.charAt(0)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-gray-900 truncate">{book.title}</p>
-                          <p className="text-xs text-gray-500 truncate mb-1">{book.author}</p>
-                          <div className="text-[10px] tracking-widest">{book.rating}</div>
-                        </div>
-                      </div>
-                    ))}
+
+
+                    {
+
+                      card.title === 'Book Reviews' && safeReviews.length > 0 ? (
+                        safeReviews.map((review) => {
+                          const profile = Array.isArray(review.profile)
+                            ? review.profile[0]
+                            : review.profile
+
+                          return (
+                            <Link
+                              key={review.id}
+                              href={`/reviews/${review.id}`}
+                              className="block group"
+                            >
+                              <div
+                                className="flex items-center gap-4 p-3 rounded-xl bg-white border border-gray-100 shadow-sm 
+          hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer"
+                              >
+                                {/* Avatar */}
+                                <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-100 flex items-center justify-center text-xs font-semibold text-gray-600">
+                                  {profile?.avatar_url ? (
+                                    <img
+                                      src={profile.avatar_url}
+                                      alt={profile?.display_name || 'User'}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    profile?.display_name?.charAt(0)?.toUpperCase() || '?'
+                                  )}
+                                </div>
+
+                                {/* Content */}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition">
+                                    {review.review_title}
+                                  </p>
+
+                                  <p className="text-xs text-gray-500 truncate mb-1">
+                                    {review.book_title} by {review.book_author}
+                                  </p>
+
+                                  <p className="text-xs text-gray-500 truncate mb-1">
+                                    {profile?.display_name || profile?.email || 'Unknown'}
+                                  </p>
+
+                                  <div className="text-[10px] tracking-widest">
+                                    {'⭐'.repeat(review.rating || 0)}
+                                  </div>
+                                </div>
+                              </div>
+                            </Link>
+                          )
+                        })
+                      ) : (
+                        <p className="text-sm text-gray-400 text-center py-6">
+                          No reviews yet
+                        </p>
+                      )}
                   </div>
+
                 </div>
 
               </div>
             ) : (
 
-              // --- STANDARD CARD LAYOUT (md & wide) ---
               <div className="flex flex-col h-full relative z-10">
                 <div>
                   <div className="flex items-center gap-3 mb-4">
