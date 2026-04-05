@@ -1,5 +1,6 @@
 export interface Review {
   id: string
+  review_title: string
   book_title: string
   book_author: string
   rating: number
