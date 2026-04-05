@@ -1,16 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useParams } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
 export default function ReviewDetailPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), []) 
 
   const params = useParams()
-
   const reviewId = params.id as string
 
   const [userId, setUserId] = useState<string | null>(null)
@@ -30,7 +29,6 @@ export default function ReviewDetailPage() {
       const uid = userData.user?.id || null
       setUserId(uid)
 
-      // Review
       const { data: reviewData } = await supabase
         .from('book_reviews')
         .select(`
@@ -50,7 +48,6 @@ export default function ReviewDetailPage() {
 
       setProfile(p)
 
-      // Likes
       const { count } = await supabase
         .from('interactions')
         .select('*', { count: 'exact', head: true })
@@ -73,7 +70,6 @@ export default function ReviewDetailPage() {
         setLiked(!!data)
       }
 
-      // Comments
       const { data: commentData } = await supabase
         .from('interactions')
         .select(`
@@ -89,9 +85,9 @@ export default function ReviewDetailPage() {
     }
 
     init()
-  }, [reviewId, supabase])
+  }, [reviewId]) 
 
-  // ❤️ Toggle Like
+  // ❤️ Toggle Like (safe)
   const toggleLike = async () => {
     if (!userId) return
 
@@ -99,72 +95,100 @@ export default function ReviewDetailPage() {
       setLiked(false)
       setLikeCount((c) => Math.max(c - 1, 0))
 
-      await supabase
+      const { error } = await supabase
         .from('interactions')
         .delete()
         .eq('user_id', userId)
         .eq('target_id', reviewId)
         .eq('target_type', 'book_reviews')
         .eq('interaction_type', 'like')
+
+      if (error) {
+        console.error(error)
+        setLiked(true)
+        setLikeCount((c) => c + 1)
+      }
+
     } else {
       setLiked(true)
       setLikeCount((c) => c + 1)
 
-      await supabase.from('interactions').insert({
+      const { error } = await supabase.from('interactions').insert({
         user_id: userId,
         target_id: reviewId,
         target_type: 'book_reviews',
         interaction_type: 'like',
       })
+
+      if (error) {
+        console.error(error)
+        setLiked(false)
+        setLikeCount((c) => Math.max(c - 1, 0))
+      }
     }
   }
 
-  // 💬 Add Comment
+  // 💬 Add Comment (PRODUCTION SAFE)
   const addComment = async () => {
     if (!commentText.trim() || !userId) return
 
-    // 🔹 Get current user profile (for UI)
+    const text = commentText
+
     const { data: userData } = await supabase
       .from('user_profiles')
       .select('display_name, avatar_url')
       .eq('id', userId)
       .single()
 
-    // 🔹 Create temp comment (optimistic UI)
+    const tempId = crypto.randomUUID()
+
     const newComment = {
-      id: crypto.randomUUID(), // temp id
+      id: tempId,
       user_id: userId,
-      payload: { text: commentText },
+      payload: { text },
       user: userData,
+      created_at: new Date().toISOString(), 
     }
 
-    // ✅ Update UI instantly
     setComments((prev) => [...prev, newComment])
     setCommentText('')
 
-    // 🔹 Save to DB
-    const { error } = await supabase.from('interactions').insert({
-      user_id: userId,
-      target_id: reviewId,
-      target_type: 'book_reviews',
-      interaction_type: 'comment',
-      payload: { text: newComment.payload.text },
-    })
+    const { data, error } = await supabase
+      .from('interactions')
+      .insert({
+        user_id: userId,
+        target_id: reviewId,
+        target_type: 'book_reviews',
+        interaction_type: 'comment',
+        payload: { text },
+      })
+      .select(`
+        *,
+        user:user_profiles(display_name, avatar_url)
+      `)
+      .single()
 
     if (error) {
       console.error(error)
-      // ❌ rollback if failed
-      setComments((prev) => prev.filter((c) => c.id !== newComment.id))
+      setComments((prev) => prev.filter((c) => c.id !== tempId))
+      return
     }
+
+    setComments((prev) =>
+      prev.map((c) =>
+        c.id === tempId
+          ? {
+            ...data,
+            user: Array.isArray(data.user) ? data.user[0] : data.user,
+          }
+          : c
+      )
+    )
   }
 
   // 🗑 Delete Comment
   const deleteComment = async (id: string) => {
-    await supabase
-      .from('interactions')
-      .delete()
-      .eq('id', id)
-
+    await supabase.from('interactions').delete().eq('id', id)
     setComments((prev) => prev.filter((c) => c.id !== id))
   }
 
@@ -176,20 +200,18 @@ export default function ReviewDetailPage() {
   )
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50">
 
-      {/* CONTAINER */}
-      <div className="max-w-3xl mx-auto px-4 py-10 space-y-10">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-10">
 
-        {/* HEADER (NO CARD) */}
+        {/* HEADER */}
         <div className="space-y-6">
 
-          {/* Author */}
           <div className="flex items-center gap-3">
             {profile?.avatar_url ? (
               <img src={profile.avatar_url} className="h-10 w-10 rounded-full object-cover" />
             ) : (
-              <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium">
                 {profile?.display_name?.charAt(0)}
               </div>
             )}
@@ -204,55 +226,48 @@ export default function ReviewDetailPage() {
             </div>
           </div>
 
-          {/* Title */}
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
               {review.review_title}
             </h1>
 
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm sm:text-base text-gray-500 mt-2">
               {review.book_title} · {review.book_author}
             </p>
           </div>
 
-          {/* Rating */}
           <div className="text-yellow-400 text-lg">
             {'★'.repeat(review.rating || 0)}
           </div>
 
         </div>
 
-        {/* 📖 REVIEW CONTENT (ONLY THIS HAS BG) */}
-        <div className="bg-white border rounded-2xl p-6 sm:p-8 shadow-sm">
+        {/* CONTENT */}
+        <div className="bg-white border rounded-2xl p-5 sm:p-6 lg:p-8 shadow-sm">
 
-          <div className="prose prose-lg max-w-none text-gray-800">
+          <div className="prose prose-sm sm:prose lg:prose-lg max-w-none text-gray-800">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {review.review_text}
             </ReactMarkdown>
           </div>
 
-          {/* Images */}
           {review.media_urls?.length > 0 && (
-            <div className="mt-8 space-y-5">
+            <div className="mt-6 space-y-4">
               {review.media_urls.map((url: string) => (
-                <img
-                  key={url}
-                  src={url}
-                  className="w-full rounded-xl border"
-                />
+                <img key={url} src={url} className="w-full rounded-xl border max-h-[400px]" />
               ))}
             </div>
           )}
 
         </div>
 
-        {/* ❤️ INTERACTIONS */}
+        {/* INTERACTIONS */}
         <div className="flex items-center justify-between border-t pt-6">
 
           <button
             onClick={toggleLike}
             className={`flex items-center gap-2 px-4 py-2 rounded-full border transition
-            ${liked
+              ${liked
                 ? 'bg-red-50 text-red-500 border-red-200'
                 : 'bg-white text-gray-600 border-gray-200 hover:border-red-200 hover:text-red-400'
               }`}
@@ -267,14 +282,13 @@ export default function ReviewDetailPage() {
 
         </div>
 
-        {/* 💬 COMMENTS SECTION */}
-        <div className="bg-white border rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+        {/* COMMENTS */}
+        <div className="bg-white border rounded-2xl p-5 sm:p-6 lg:p-8 shadow-sm space-y-6">
 
           <h3 className="text-lg font-semibold text-gray-900">
             Comments
           </h3>
 
-          {/* Comment List */}
           <div className="space-y-6">
             {comments.map((c) => {
               const u = Array.isArray(c.user) ? c.user[0] : c.user
@@ -327,17 +341,22 @@ export default function ReviewDetailPage() {
             })}
           </div>
 
-          {/* Add Comment */}
-          <div className="flex gap-3 pt-4 border-t">
+          <div className="flex gap-2 sm:gap-3 pt-4 border-t">
             <input
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  addComment()
+                }
+              }}
               placeholder="Write a comment..."
               className="flex-1 border rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
               onClick={addComment}
-              className="bg-blue-600 text-white px-5 py-2 rounded-full text-sm font-medium hover:bg-blue-700"
+              className="bg-blue-600 text-white px-4 sm:px-5 py-2 rounded-full text-sm font-medium hover:bg-blue-700"
             >
               Post
             </button>
