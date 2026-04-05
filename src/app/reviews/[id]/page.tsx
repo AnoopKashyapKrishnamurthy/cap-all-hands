@@ -7,7 +7,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
 export default function ReviewDetailPage() {
-  const supabase = useMemo(() => createClient(), []) 
+  const supabase = useMemo(() => createClient(), [])
 
   const params = useParams()
   const reviewId = params.id as string
@@ -85,7 +85,7 @@ export default function ReviewDetailPage() {
     }
 
     init()
-  }, [reviewId]) 
+  }, [reviewId])
 
   // ❤️ Toggle Like (safe)
   const toggleLike = async () => {
@@ -147,7 +147,7 @@ export default function ReviewDetailPage() {
       user_id: userId,
       payload: { text },
       user: userData,
-      created_at: new Date().toISOString(), 
+      created_at: new Date().toISOString(),
     }
 
     setComments((prev) => [...prev, newComment])
@@ -200,7 +200,7 @@ export default function ReviewDetailPage() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-10">
 
