@@ -1,6 +1,7 @@
 import { protectRoute } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import UserCard, { DirectoryUser } from '@/components/profile/UserCard'
+import PopcornStandup from '@/components/people/PopcornStandup'
 
 export const metadata = {
   title: 'People - CAP All-Hands',
@@ -30,6 +31,26 @@ export default async function PeoplePage() {
 
   return (
     <section className="max-w-6xl mx-auto space-y-8 py-4">
+
+      {/* MINIMAL CHANGE: Native HTML Collapsible */}
+      <details className="bg-white border rounded-2xl shadow-sm overflow-hidden group">
+        <summary className="flex items-center justify-between p-4 sm:p-6 cursor-pointer hover:bg-gray-50 transition-colors list-none [&::-webkit-details-marker]:hidden">
+          <div className="flex items-center gap-4">
+
+            <div>
+              <h2 className="font-semibold text-gray-900 text-lg">Popcorn Standup Mode</h2>
+              <p className="text-xs sm:text-sm text-gray-500 font-normal">Click to expand and select team members</p>
+            </div>
+          </div>
+          <span className="text-gray-400 group-open:rotate-180 transition-transform duration-200">
+            ▼
+          </span>
+        </summary>
+        <div className="border-t bg-gray-50/30 p-2 sm:p-4">
+          <PopcornStandup users={users} />
+        </div>
+      </details>
+
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">People</h1>
