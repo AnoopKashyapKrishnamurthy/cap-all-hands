@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { protectRoute } from '@/lib/auth'
+import { BookOpen, PenSquare, Image, CalendarDays } from 'lucide-react'
 
 export const metadata = {
   title: 'Dashboard - CAP All-Hands',
@@ -31,7 +32,7 @@ export default async function DashboardPage() {
   const cards = [
     {
       title: 'Book Reviews',
-      icon: '📚',
+      icon:  <BookOpen className="w-5 h-5" />,
       size: 'lg',
       desc: 'Browse community reviews or write your own. Discover what your teammates are reading this month.',
       links: [
@@ -41,7 +42,7 @@ export default async function DashboardPage() {
     },
     {
       title: 'Blogs',
-      icon: '✍',
+      icon: <PenSquare className="w-5 h-5" />,
       size: 'md',
       desc: 'Share insights, updates, and ideas with the team.',
       links: [
@@ -51,7 +52,7 @@ export default async function DashboardPage() {
     },
     {
       title: 'Gallery',
-      icon: '🖼️',
+      icon:  <Image className="w-5 h-5" />,
       size: 'md',
       desc: 'Create posts and share photos with the team.',
       links: [
@@ -61,7 +62,7 @@ export default async function DashboardPage() {
     },
     {
       title: 'Events',
-      icon: '🗓️',
+      icon: <CalendarDays className="w-5 h-5" />,
       size: 'wide',
       desc: 'Discover and join upcoming team events. Never miss a gathering.',
       links: [

@@ -30,7 +30,7 @@ export default function BlogCard({
 
   const formattedDate = new Date(blog.created_at).toLocaleDateString(
     undefined,
-    { year: 'numeric', month: 'short', day: 'numeric' }
+    { month: 'short', day: 'numeric', year: 'numeric' }
   )
 
   const goToBlog = () => {
@@ -56,91 +56,115 @@ export default function BlogCard({
 
     router.refresh()
   }
+  const getPreviewText = (content: string) => {
+    return content
+      // Remove markdown syntax
+      .replace(/[#_*>\-\[\]\(\)`]/g, '')
+      // Remove multiple newlines
+      .replace(/\n+/g, ' ')
+      // Remove extra spaces
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
 
   return (
     <div
       onClick={goToBlog}
-      className={`group cursor-pointer rounded-2xl border bg-white shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full ${
-        isDraft ? 'border-yellow-300 bg-yellow-50' : ''
-      }`}
+      className={`
+        group cursor-pointer rounded-xl border bg-white
+        transition-all duration-300 overflow-hidden flex flex-col h-full
+        hover:shadow-lg hover:-translate-y-[2px]
+        ${isDraft ? 'border-yellow-300 bg-yellow-50' : 'border-slate-200'}
+      `}
     >
 
-      {/* HEADER (ALWAYS SAME HEIGHT) */}
-      <div className="h-48 w-full overflow-hidden flex-shrink-0 bg-gray-100">
+      {/* IMAGE */}
+      <div className="h-44 w-full overflow-hidden bg-slate-100 relative">
+
         {blog.cover_image ? (
           <img
             src={blog.cover_image}
             alt={blog.title}
-            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
           />
         ) : (
-          <div className="h-full w-full bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center px-6 text-white text-center">
-            <h3 className="text-lg font-semibold line-clamp-2">
+          <div className="h-full w-full bg-slate-100 flex items-center justify-center px-6">
+            <h3 className="text-base font-semibold text-slate-700 text-center line-clamp-2">
               {blog.title}
             </h3>
           </div>
         )}
+
+        {/* Draft Badge */}
+        {isDraft && (
+          <span className="absolute top-3 left-3 text-[10px] font-semibold bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
+            Draft
+          </span>
+        )}
       </div>
 
       {/* BODY */}
-      <div className="flex flex-col flex-1 p-6">
+      <div className="flex flex-col flex-1 p-5">
 
-        {/* Title (only if image exists) */}
+        {/* TITLE */}
         {blog.cover_image && (
-          <h3 className="text-lg font-semibold mb-2 line-clamp-2">
+          <h3 className="text-base font-semibold text-slate-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition">
             {blog.title}
           </h3>
         )}
 
-        {/* Preview */}
-        <p className="text-gray-600 text-sm line-clamp-3">
-          {blog.content.replace(/<[^>]+>/g, '')}
+        {/* CONTENT PREVIEW */}
+        <p className="text-sm text-slate-600 line-clamp-3 leading-relaxed">
+          {getPreviewText(blog.content)}
         </p>
 
-        {/* PUSH FOOTER TO BOTTOM */}
-        <div className="mt-auto pt-6 border-t">
+        {/* FOOTER */}
+        <div className="mt-auto pt-5 border-t border-slate-100">
 
-          {/* Author */}
+          {/* AUTHOR */}
           <div className="flex items-center gap-3 mb-3">
             {avatarUrl ? (
               <img
                 src={avatarUrl}
                 alt={displayName}
-                className="h-8 w-8 rounded-full object-cover"
+                className="h-7 w-7 rounded-full object-cover"
               />
             ) : (
-              <div className="h-8 w-8 rounded-full bg-indigo-500 text-white flex items-center justify-center text-sm font-semibold">
+              <div className="h-7 w-7 rounded-full bg-slate-200 flex items-center justify-center text-xs font-medium">
                 {initial}
               </div>
             )}
 
-            <div>
-              <p className="text-sm font-medium text-gray-900">
+            <div className="text-xs">
+              <p className="font-medium text-slate-800 leading-tight">
                 {displayName}
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-slate-400">
                 {formattedDate}
               </p>
             </div>
           </div>
 
-          {/* Actions */}
+          {/* ACTIONS */}
           <div
             className="flex justify-between items-center text-sm"
             onClick={(e) => e.stopPropagation()}
           >
-            <span className="text-blue-600 font-medium">
-              View →
+
+            {/* View CTA */}
+            <span className="text-slate-500 group-hover:text-blue-600 transition">
+              Read →
             </span>
 
+            {/* OWNER ACTIONS */}
             {isOwner && (
-              <div className="flex gap-3">
+              <div className="flex gap-3 text-xs">
 
                 <button
                   onClick={() =>
                     router.push(`/blogs/edit/${blog.id}`)
                   }
-                  className="text-gray-600 hover:underline"
+                  className="text-slate-500 hover:text-slate-900"
                 >
                   Edit
                 </button>
@@ -148,7 +172,7 @@ export default function BlogCard({
                 {!confirming ? (
                   <button
                     onClick={() => setConfirming(true)}
-                    className="text-red-500"
+                    className="text-red-500 hover:text-red-600"
                   >
                     Delete
                   </button>
@@ -167,6 +191,7 @@ export default function BlogCard({
           </div>
 
         </div>
+
       </div>
     </div>
   )

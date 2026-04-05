@@ -1,152 +1,536 @@
-import { notFound } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
+'use client'
+
+import { useEffect, useState, useRef } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import { protectRoute } from "@/lib/auth"
+import { Play, Pause, ArrowLeft } from "lucide-react"
+import { PiHandsClapping } from "react-icons/pi"
 
-interface BlogPageProps {
-  params: Promise<{ slug: string }>
+/* TYPES */
+interface Profile {
+  display_name: string
+  avatar_url?: string
 }
 
-export default async function BlogPage({ params }: BlogPageProps) {
-  const { slug } = await params
+interface Blog {
+  id: string
+  title: string
+  slug: string
+  content: string
+  cover_image?: string
+  created_at: string
+  published?: boolean
+  author_id?: string
+  profile?: Profile
+}
 
-  // 🔒 Require login
-  const user = await protectRoute()
-  const currentUserId = user.id
+interface Comment {
+  id: string
+  user_id: string
+  payload: { text: string }
+  user?: Profile
+  created_at: string
+}
 
-  const supabase = await createClient()
+interface ClapEntry {
+  user_id: string
+  count: number
+  display_name?: string
+  avatar_url?: string
+}
 
-  const { data: blog, error } = await supabase
-    .from("blogs")
-    .select(`
-      id,
-      title,
-      slug,
-      content,
-      cover_image,
-      created_at,
-      author_id,
-      published,
-      profile:user_profiles (
-        display_name,
-        avatar_url
-      )
-    `)
-    .eq("slug", slug)
-    .single()
+/* HELPERS */
+const cleanText = (text: string) =>
+  text
+    .replace(/[#_*>\-\[\]\(\)`]/g, '')
+    .replace(/\n+/g, ' ')
+    .replace(/\s+/g, ' ')
 
-  if (error) {
-    console.error("Blog fetch error:", error)
-    notFound()
-    return null
+const readingTime = (text: string) =>
+  Math.max(1, Math.ceil(text.split(/\s+/).length / 200))
+
+export default function BlogPage() {
+  const { slug } = useParams()
+  const router = useRouter()
+  const supabase = createClient()
+
+  const [blog, setBlog] = useState<Blog | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+
+  const [claps, setClaps] = useState(0)
+  const [myClaps, setMyClaps] = useState(0)
+  const [clapAnim, setClapAnim] = useState(false)
+  const [showClapTooltip, setShowClapTooltip] = useState(false)
+
+  // Clap detail modal
+  const [showClapModal, setShowClapModal] = useState(false)
+  const [clapEntries, setClapEntries] = useState<ClapEntry[]>([])
+  const [loadingClaps, setLoadingClaps] = useState(false)
+
+  const [comments, setComments] = useState<Comment[]>([])
+  const [commentText, setCommentText] = useState("")
+
+  const [listening, setListening] = useState(false)
+  const speechRef = useRef<SpeechSynthesisUtterance | null>(null)
+
+  const [publishing, setPublishing] = useState(false)
+
+  /* LOAD */
+  useEffect(() => {
+    const init = async () => {
+      const { data: userData } = await supabase.auth.getUser()
+      const uid = userData.user?.id || null
+      setUserId(uid)
+
+      const { data: blogData } = await supabase
+        .from("blogs")
+        .select(`*, profile:user_profiles(display_name, avatar_url)`)
+        .eq("slug", slug)
+        .single()
+
+      if (!blogData) return
+
+      setBlog(blogData)
+      setProfile(Array.isArray(blogData.profile) ? blogData.profile[0] : blogData.profile)
+
+      /* CLAPS */
+      const { data: clapData } = await supabase
+        .from("interactions")
+        .select("payload, user_id")
+        .eq("target_id", blogData.id)
+        .eq("target_type", "blogs")
+        .eq("interaction_type", "like")
+
+      const totalClaps =
+        clapData?.reduce((sum, row) => sum + (row.payload?.count || 0), 0) || 0
+      setClaps(totalClaps)
+
+      if (uid) {
+        const mine = clapData?.find((r) => r.user_id === uid)
+        setMyClaps(mine?.payload?.count || 0)
+      }
+
+
+      if (!blogData.published && uid !== blogData.author_id) {
+        router.push("/blogs")
+        return
+      }
+
+      /* COMMENTS */
+      if (blogData.published) {
+        const { data: commentsData } = await supabase
+          .from("interactions")
+          .select(`*, user:user_profiles(display_name, avatar_url)`)
+          .eq("target_id", blogData.id)
+          .eq("target_type", "blogs")
+          .eq("interaction_type", "comment")
+          .order("created_at", { ascending: true })
+
+        setComments(
+          (commentsData || []).map((c: any) => ({
+            ...c,
+            user: Array.isArray(c.user) ? c.user[0] : c.user,
+          }))
+        )
+      }
+    }
+
+    init()
+  }, [slug])
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined") speechSynthesis.cancel()
+    }
+  }, [])
+
+  /* 👏 CLAP */
+  const handleClap = async () => {
+    if (!userId || !blog) return
+
+    setClaps((c) => c + 1)
+    setMyClaps((c) => c + 1)
+    setClapAnim(true)
+    setTimeout(() => setClapAnim(false), 200)
+
+    const { data: existing } = await supabase
+      .from("interactions")
+      .select("id, payload")
+      .eq("user_id", userId)
+      .eq("target_id", blog.id)
+      .eq("target_type", "blogs")
+      .eq("interaction_type", "like")
+      .maybeSingle()
+
+    if (existing) {
+      const newCount = (existing.payload?.count || 0) + 1
+      await supabase
+        .from("interactions")
+        .update({ payload: { count: newCount } })
+        .eq("id", existing.id)
+    } else {
+      const { error } = await supabase.from("interactions").insert({
+        user_id: userId,
+        target_id: blog.id,
+        target_type: "blogs",
+        interaction_type: "like",
+        payload: { count: 1 },
+      })
+      if (error) console.error("Clap update failed:", error)
+    }
   }
 
-  if (!blog) {
-    notFound()
-    return null
+  /* 👁 VIEW CLAPS MODAL */
+  const openClapModal = async () => {
+    if (!blog) return
+    setShowClapModal(true)
+    setLoadingClaps(true)
+
+    const { data: clapData } = await supabase
+      .from("interactions")
+      .select(`payload, user_id, user:user_profiles(display_name, avatar_url)`)
+      .eq("target_id", blog.id)
+      .eq("target_type", "blogs")
+      .eq("interaction_type", "like")
+
+    const entries: ClapEntry[] = (clapData || []).map((r: any) => {
+      const u = Array.isArray(r.user) ? r.user[0] : r.user
+      return {
+        user_id: r.user_id,
+        count: r.payload?.count || 0,
+        display_name: u?.display_name,
+        avatar_url: u?.avatar_url,
+      }
+    }).sort((a, b) => b.count - a.count)
+
+    setClapEntries(entries)
+    setLoadingClaps(false)
   }
 
-  // Draft protection
-  if (!blog.published && blog.author_id !== currentUserId) {
-    notFound()
-    return null
+  /* 🔊 LISTEN */
+  const toggleListen = () => {
+    if (!blog) return
+
+    if (listening) {
+      speechSynthesis.cancel()
+      setListening(false)
+      return
+    }
+
+    // Wait for voices to load
+    const speak = () => {
+      const voices = speechSynthesis.getVoices()
+
+      const preferred =
+        voices.find(v => v.name === "Google UK English Female") ||
+        voices.find(v => v.name === "Google US English") ||
+        voices.find(v => v.lang === "en-GB") ||
+        voices.find(v => v.lang.startsWith("en"))
+
+      const utter = new SpeechSynthesisUtterance(cleanText(blog.content))
+      if (preferred) utter.voice = preferred
+      utter.rate = 0.92
+      utter.pitch = 1.05
+      utter.volume = 1
+      utter.onend = () => setListening(false)
+
+      speechRef.current = utter
+      speechSynthesis.speak(utter)
+      setListening(true)
+    }
+
+    // Voices may not be loaded yet on first call
+    if (speechSynthesis.getVoices().length) {
+      speak()
+    } else {
+      speechSynthesis.onvoiceschanged = speak
+    }
   }
 
-  // Normalize profile (same pattern as BlogsPage)
-  const profile = Array.isArray(blog.profile)
-    ? blog.profile[0]
-    : blog.profile ?? undefined
+  /* 💬 ADD COMMENT */
+  const addComment = async () => {
+    if (!userId || !blog || !commentText.trim()) return
 
-  const wordCount = blog.content?.split(/\s+/).length || 0
-  const readTime = Math.ceil(wordCount / 200)
+    const { data, error } = await supabase
+      .from("interactions")
+      .insert({
+        user_id: userId,
+        target_id: blog.id,
+        target_type: "blogs",
+        interaction_type: "comment",
+        payload: { text: commentText.trim() },
+      })
+      .select(`*, user:user_profiles(display_name, avatar_url)`)
+      .single()
 
-  const createdDate = new Date(blog.created_at)
-  const formattedDate = createdDate.toLocaleDateString("en-IN", {
-    year: "numeric",
+    if (error || !data) return
+
+    setComments((prev) => [
+      ...prev,
+      { ...data, user: Array.isArray(data.user) ? data.user[0] : data.user },
+    ])
+    setCommentText("")
+  }
+
+  /* 💬 DELETE COMMENT */
+  const deleteComment = async (id: string) => {
+    setComments((prev) => prev.filter((c) => c.id !== id))
+    await supabase.from("interactions").delete().eq("id", id)
+  }
+
+  /* 📢 PUBLISH */
+
+  const handlePublish = async () => {
+    if (!blog) return
+    setPublishing(true)
+    const { error } = await supabase
+      .from("blogs")
+      .update({ published: true })
+      .eq("id", blog.id)
+
+    if (!error) setBlog((b) => b ? { ...b, published: true } : b)
+    setPublishing(false)
+  }
+
+  if (!blog) return null
+
+  const isOwner = userId === blog.author_id
+  const isDraft = !blog.published
+
+  const formattedDate = new Date(blog.created_at).toLocaleDateString("en-IN", {
     month: "long",
     day: "numeric",
-  })
-
-  const formattedTime = createdDate.toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
+    year: "numeric",
   })
 
   return (
-    <article className="max-w-3xl mx-auto py-16 px-6">
+    <div className="max-w-2xl mx-auto px-6 py-16">
 
-      {!blog.published && (
-        <div className="mb-6 bg-yellow-100 text-yellow-800 px-4 py-2 rounded-xl text-sm">
-          Draft Preview – Only visible to you
-        </div>
-      )}
+      {/* BACK */}
+      <button
+        onClick={() => router.push("/blogs")}
+        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 mb-8 transition-colors"
+      >
+        <ArrowLeft size={16} />
+        All blogs
+      </button>
 
-      <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight text-gray-900">
-        {blog.title}
-      </h1>
-
-      {/* Author Section */}
-      <div className="mt-8 flex items-center gap-4 border-b pb-6">
-
-        <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200">
-          {profile?.avatar_url ? (
-            <img
-              src={profile.avatar_url}
-              alt={profile.display_name || "Author"}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm font-medium">
-              {profile?.display_name?.charAt(0) || "A"}
-            </div>
+      {/* DRAFT BANNER + PUBLISH */}
+      {isDraft && (
+        <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-6 text-sm text-amber-800">
+          <span>This post is a draft — only you can see it.</span>
+          {isOwner && (
+            <button
+              onClick={handlePublish}
+              disabled={publishing}
+              className="ml-4 bg-amber-600 hover:bg-amber-700 text-white px-4 py-1.5 rounded-full text-xs font-medium transition-colors disabled:opacity-50"
+            >
+              {publishing ? "Publishing…" : "Publish"}
+            </button>
           )}
         </div>
+      )}
 
-        <div>
-          <p className="font-medium text-gray-900">
-            {profile?.display_name || "Unknown Author"}
-          </p>
-          <p className="text-sm text-gray-500">
-            {formattedDate} · {formattedTime} · {readTime} min read
-          </p>
-        </div>
+      <h1 className="text-4xl font-bold">{blog.title}</h1>
 
-        {blog.author_id === currentUserId && (
-          <span className="ml-auto text-xs font-medium bg-blue-100 text-blue-600 px-3 py-1 rounded-full">
-            You are the author
-          </span>
+      {/* AUTHOR */}
+      <div className="flex items-center gap-3 mt-6 text-sm text-gray-500">
+        {profile?.avatar_url ? (
+          <img src={profile.avatar_url} className="h-10 w-10 rounded-full object-cover" />
+        ) : (
+          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center font-medium">
+            {profile?.display_name?.charAt(0)}
+          </div>
         )}
+        <div>
+          <p className="font-medium text-gray-900">{profile?.display_name}</p>
+          <p>{formattedDate} · {readingTime(blog.content)} min read</p>
+        </div>
       </div>
 
-      {blog.cover_image && (
-        <div className="mt-10">
-          <img
-            src={blog.cover_image}
-            alt={blog.title}
-            className="rounded-3xl w-full object-cover max-h-[500px] shadow-sm"
-          />
+      {/* ACTIONS */}
+      {blog.published && (
+        <div className="flex justify-between border-y py-4 mt-8">
+
+          {/* CLAP BUTTON + COUNT */}
+          <div className="flex items-center gap-3">
+
+            {/* Clap button with "your clap count" tooltip */}
+            <div className="relative">
+              <button
+                onClick={handleClap}
+                onMouseEnter={() => setShowClapTooltip(true)}
+                onMouseLeave={() => setShowClapTooltip(false)}
+                className={`flex items-center gap-2 transition-transform ${clapAnim ? 'scale-125' : 'scale-100'}`}
+              >
+                <PiHandsClapping className="w-6 h-6" />
+              </button>
+
+              {/* Tooltip: your clap count */}
+              {showClapTooltip && userId && (
+                <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2.5 py-1 rounded-full whitespace-nowrap pointer-events-none">
+                  {myClaps > 0 ? `You clapped ${myClaps}×` : "Clap for this"}
+                </div>
+              )}
+            </div>
+
+            {/* Total clap count with "View claps" tooltip */}
+            <div className="relative group/count">
+              <button
+                onClick={openClapModal}
+                className="font-medium text-sm text-gray-700 hover:text-gray-900 transition-colors"
+              >
+                {claps}
+              </button>
+              <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2.5 py-1 rounded-full whitespace-nowrap pointer-events-none opacity-0 group-hover/count:opacity-100 transition-opacity">
+                View claps
+              </div>
+            </div>
+
+          </div>
+
+          {/* LISTEN */}
+          <button
+            onClick={toggleListen}
+            className="flex items-center gap-2 text-sm"
+          >
+            {listening ? <Pause size={18} /> : <Play size={18} />}
+            {listening ? 'Pause' : 'Listen'}
+          </button>
         </div>
       )}
 
-      <div className="prose prose-blue prose-lg max-w-none mt-12 leading-relaxed">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-          {blog.content}
-        </ReactMarkdown>
+      {blog.cover_image && (
+        <img src={blog.cover_image} className="mt-10 rounded-xl w-full object-cover" />
+      )}
+
+      <div className="mx-auto max-w-screen-md px-4 sm:px-6 lg:px-8 mt-12">
+        <article className="
+    prose 
+    prose-stone 
+    max-w-none 
+    sm:prose-lg 
+    lg:prose-xl 
+    prose-headings:font-serif 
+    prose-headings:font-bold 
+    prose-headings:tracking-tight 
+    prose-p:font-serif 
+    prose-p:text-gray-800 
+    prose-p:leading-relaxed 
+    prose-a:text-green-700 
+    prose-a:no-underline 
+    hover:prose-a:underline 
+    prose-img:rounded-sm
+    prose-blockquote:border-l-black 
+    prose-blockquote:italic
+    selection:bg-green-100
+  ">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {blog.content}
+          </ReactMarkdown>
+        </article>
       </div>
+      {/* COMMENTS */}
+      {blog.published && (
+        <div className="mt-16 space-y-6">
+          <h3 className="font-semibold">Responses ({comments.length})</h3>
 
-      <div className="my-16 border-t border-gray-200" />
+          {comments.map((c) => (
+            <div key={c.id} className="flex gap-3 group">
+              {c.user?.avatar_url ? (
+                <img src={c.user.avatar_url} className="h-8 w-8 rounded-full object-cover" />
+              ) : (
+                <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-xs">
+                  {c.user?.display_name?.charAt(0)}
+                </div>
+              )}
+              <div className="flex-1">
+                <div className="flex justify-between items-center">
+                  <p className="text-sm font-medium">{c.user?.display_name}</p>
+                  {userId === c.user_id && (
+                    <button
+                      onClick={() => deleteComment(c.id)}
+                      className="text-xs text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400">{new Date(c.created_at).toLocaleDateString()}</p>
+                <p className="text-sm mt-1">{c.payload.text}</p>
+              </div>
+            </div>
+          ))}
 
-      <div className="flex items-center justify-between">
-        <button className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition">
-          ❤️ Like
-        </button>
+          <div className="flex gap-3 mt-6">
+            <input
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addComment()}
+              placeholder="Write a response..."
+              className="flex-1 border rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200"
+            />
+            <button
+              onClick={addComment}
+              className="bg-black text-white px-4 py-2 rounded-full text-sm"
+            >
+              Post
+            </button>
+          </div>
+        </div>
+      )}
 
-        <span className="text-sm text-gray-400">
-          Comments coming soon
-        </span>
-      </div>
+      {/* CLAP MODAL */}
+      {showClapModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setShowClapModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-lg">Claps</h2>
+              <button
+                onClick={() => setShowClapModal(false)}
+                className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+              >
+                ×
+              </button>
+            </div>
 
-    </article>
+            {loadingClaps ? (
+              <div className="text-center text-gray-400 py-8 text-sm">Loading…</div>
+            ) : clapEntries.length === 0 ? (
+              <div className="text-center text-gray-400 py-8 text-sm">No claps yet.</div>
+            ) : (
+              <ul className="space-y-3 max-h-72 overflow-y-auto">
+                {clapEntries.map((e) => (
+                  <li key={e.user_id} className="flex items-center gap-3">
+                    {e.avatar_url ? (
+                      <img src={e.avatar_url} className="h-9 w-9 rounded-full object-cover" />
+                    ) : (
+                      <div className="h-9 w-9 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium">
+                        {e.display_name?.charAt(0)}
+                      </div>
+                    )}
+                    <span className="flex-1 text-sm font-medium">{e.display_name}</span>
+                    <span className="flex items-center gap-1 text-sm text-gray-500">
+                      <PiHandsClapping className="w-4 h-4" />
+                      {e.count}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+    </div>
   )
 }

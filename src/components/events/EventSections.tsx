@@ -74,10 +74,10 @@ function GlassCard({
         size === 'xl'
             ? 'clamp(36px, 5.5vw, 64px)'
             : size === 'lg'
-            ? 'clamp(28px, 4vw, 48px)'
-            : size === 'md'
-            ? 'clamp(18px, 2.2vw, 26px)'
-            : '14px'
+                ? 'clamp(28px, 4vw, 48px)'
+                : size === 'md'
+                    ? 'clamp(18px, 2.2vw, 26px)'
+                    : '14px'
 
     return (
         <div
@@ -197,14 +197,13 @@ function SlideView({
     const heroItem = items[0]
     const rest = items.slice(1)
 
-    // Determine bento layout - FIXED to prevent NaN
     const colCount = Math.max(1, Math.min(rest.length, 3))
     const gridCols =
         colCount === 1
             ? '1fr'
             : colCount === 2
-            ? '1fr 1fr'
-            : '1fr 1fr 1fr'
+                ? '1fr 1fr'
+                : '1fr 1fr 1fr'
 
     return (
         <div
