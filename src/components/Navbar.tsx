@@ -16,6 +16,11 @@ export default function Navbar({
 }) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [currentUser, setCurrentUser] = useState(user)
+
+  useEffect(() => {
+    setCurrentUser(user)
+  }, [user])
 
   const email = user?.email || ''
   const avatarUrl = profile?.avatar_url || null
@@ -60,8 +65,8 @@ export default function Navbar({
                   key={item.href}
                   href={item.href}
                   className={`text-sm font-medium transition-all relative group/link ${pathname === item.href
-                      ? 'text-accent-600'
-                      : 'text-slate-600 hover:text-accent-600'
+                    ? 'text-accent-600'
+                    : 'text-slate-600 hover:text-accent-600'
                     }`}
                 >
                   {item.name}
@@ -69,8 +74,8 @@ export default function Navbar({
                   {/* underline */}
                   <span
                     className={`absolute -bottom-1 left-0 h-[2px] rounded-full bg-accent-500 transition-all duration-300 ${pathname === item.href
-                        ? 'w-full'
-                        : 'w-0 group-hover/link:w-full'
+                      ? 'w-full'
+                      : 'w-0 group-hover/link:w-full'
                       }`}
                   />
                 </Link>
@@ -78,7 +83,7 @@ export default function Navbar({
             ))}
           </nav>
 
-          {!user ? (
+          {!currentUser ? (
             <Link
               href="/login"
               className="bg-accent-600 text-white px-5 py-2 rounded-lg font-medium 
@@ -127,8 +132,8 @@ export default function Navbar({
         <Link
           href="/"
           className={`block text-base font-medium py-2.5 px-3 rounded-md transition ${pathname === '/'
-              ? 'bg-accent-100 text-accent-700'
-              : 'text-slate-700 hover:bg-accent-50'
+            ? 'bg-accent-100 text-accent-700'
+            : 'text-slate-700 hover:bg-accent-50'
             }`}
         >
           Home
@@ -140,8 +145,8 @@ export default function Navbar({
               key={item.href}
               href={item.href}
               className={`block text-base font-medium py-2.5 px-3 rounded-md transition ${pathname === item.href
-                  ? 'bg-accent-100 text-accent-700'
-                  : 'text-slate-700 hover:bg-accent-50'
+                ? 'bg-accent-100 text-accent-700'
+                : 'text-slate-700 hover:bg-accent-50'
                 }`}
             >
               {item.name}
