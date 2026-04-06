@@ -164,6 +164,7 @@ export default function EventForm({ event }: EventFormProps) {
                     if (insertError) throw insertError
                 }
                 router.push(`/events/${event!.id}`)
+                router.refresh()
             } else {
                 // Insert New Event
                 const { data: eventData, error: insertError } = await supabase

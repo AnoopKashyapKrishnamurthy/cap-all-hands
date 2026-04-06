@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import ReactMarkdown from "react-markdown"
@@ -54,7 +54,7 @@ const readingTime = (text: string) =>
 export default function BlogPage() {
   const { slug } = useParams()
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const [blog, setBlog] = useState<Blog | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
