@@ -99,6 +99,7 @@ export interface Event {
   image_storage_path: string | null
   created_at: string
   updated_at: string
+  presentation_url: string | null
   profile?: {
     display_name: string
     avatar_url: string | null

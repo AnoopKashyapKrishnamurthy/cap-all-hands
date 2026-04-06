@@ -1,3 +1,4 @@
+'use client'
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 
@@ -14,7 +15,7 @@ export default function Logo() {
                     initial={{ opacity: 0, x: -5 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.1, duration: 0.3 }}
-                    className="text-slate-900 font-extrabold text-2xl tracking-tight group-hover:text-orange-500 transition-colors duration-300"
+                    className="text-orange-500 font-extrabold text-2xl tracking-tight group-hover:text-slate-900 transition-colors duration-300"
                 >
                     CAP
                 </motion.span>

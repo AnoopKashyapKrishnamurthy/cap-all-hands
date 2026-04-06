@@ -236,6 +236,21 @@ export default async function EventPage({ params }: EventPageProps) {
           {event.description}
         </p>
       )}
+      {/* Canva Presentation */}
+      {event.presentation_url && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">📊 Presentation</h2>
+
+          <div className="relative w-full" style={{ paddingTop: "56.25%" }}>
+            <iframe
+              src={event.presentation_url}
+              loading="lazy"
+              allowFullScreen
+              className="absolute top-0 left-0 w-full h-full border-0 rounded-2xl shadow-sm"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Sections */}
       <EventSections sections={activeSections} />

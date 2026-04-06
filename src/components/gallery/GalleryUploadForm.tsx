@@ -33,20 +33,18 @@ export default function GalleryUploadForm() {
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault()
+        setLoading(true)
+        setError(null)
 
         const {
             data: { user },
         } = await supabase.auth.getUser();
 
-        if (!user) {
-            setError('You must be logged in.');
-            return;
-        }
+        if (!user) { setError('You must be logged in.'); return; }
         if (!file) { setError('Please select an image.'); return }
         if (!title.trim()) { setError('Title is required.'); return }
 
-        setLoading(true)
-        setError(null)
+
 
         try {
             const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'

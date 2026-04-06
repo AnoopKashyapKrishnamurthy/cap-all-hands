@@ -28,6 +28,7 @@ export default function ReviewForm() {
 
   // 🔹 Media
   const [files, setFiles] = useState<File[]>([])
+  const [previewUrls, setPreviewUrls] = useState<string[]>([])
 
   // 🔹 State
   const [loading, setLoading] = useState(false)
@@ -38,6 +39,11 @@ export default function ReviewForm() {
       setUserId(data.user?.id ?? null)
     })
   }, [supabase])
+
+
+  useEffect(() => {
+    return () => previewUrls.forEach(url => URL.revokeObjectURL(url))
+  }, [])
 
   // ✅ Markdown Formatting (same as blog)
   const insertFormatting = useCallback((before: string, after = '') => {
@@ -75,19 +81,20 @@ export default function ReviewForm() {
   // 🔹 File Handling
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return
-
     const selected = Array.from(e.target.files)
-
     if (files.length + selected.length > 5) {
       setError('Maximum 5 images allowed.')
       return
     }
-
+    const newUrls = selected.map(f => URL.createObjectURL(f))
     setFiles(prev => [...prev, ...selected])
+    setPreviewUrls(prev => [...prev, ...newUrls])
   }
 
   const removeFile = (index: number) => {
+    URL.revokeObjectURL(previewUrls[index])
     setFiles(prev => prev.filter((_, i) => i !== index))
+    setPreviewUrls(prev => prev.filter((_, i) => i !== index))
   }
 
   // 🔹 Submit
