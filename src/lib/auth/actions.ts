@@ -12,3 +12,19 @@ export async function logoutAction() {
   await supabase.auth.signOut();
   redirect('/login');
 }
+
+
+
+export async function updatePasswordAction(password: string) {
+  const supabase = await createClient();
+
+  const { error } = await supabase.auth.updateUser({
+    password: password
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return { success: true };
+}
