@@ -32,7 +32,9 @@ export default function EventForm({ event }: EventFormProps) {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [search, setSearch] = useState('')
-
+    const [presentationUrl, setPresentationUrl] = useState(
+        event?.presentation_url || ''
+    )
     useEffect(() => {
         // 1. Get Current User
         supabase.auth.getUser().then(({ data }) => {
@@ -70,6 +72,10 @@ export default function EventForm({ event }: EventFormProps) {
         setImagePreview(URL.createObjectURL(file))
     }
 
+    const normalizeCanvaUrl = (url: string) => {
+        if (!url?.trim()) return null
+        return url.trim()
+    }
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault()
 
@@ -94,6 +100,7 @@ export default function EventForm({ event }: EventFormProps) {
         try {
             let imageUrl = event?.image_url ?? null
             let imageStoragePath = event?.image_storage_path ?? null
+            const finalPresentationUrl = normalizeCanvaUrl(presentationUrl)
 
             // Image Upload Logic remains the same
             if (imageFile) {
@@ -125,16 +132,17 @@ export default function EventForm({ event }: EventFormProps) {
                         location: location.trim() || null,
                         image_url: imageUrl,
                         image_storage_path: imageStoragePath,
+                        presentation_url: finalPresentationUrl,
                     })
                     .eq('id', event!.id)
 
                 if (updateError) throw updateError
 
-                
 
 
 
-                const {  error: deletehostsError } = await supabase
+
+                const { error: deletehostsError } = await supabase
                     .from('interactions')
                     .delete()
                     .eq('target_id', event!.id)
@@ -177,6 +185,7 @@ export default function EventForm({ event }: EventFormProps) {
                         location: location.trim() || null,
                         image_url: imageUrl,
                         image_storage_path: imageStoragePath,
+                        presentation_url: finalPresentationUrl,
                     })
                     .select()
                     .single()
@@ -201,7 +210,7 @@ export default function EventForm({ event }: EventFormProps) {
                     if (hostInsertError) throw hostInsertError
                 }
             }
-
+            router.push(`/events/${event!.id}`)
             router.refresh()
 
         } catch (err: any) {
@@ -350,6 +359,23 @@ export default function EventForm({ event }: EventFormProps) {
             </div>
 
 
+            <div>
+                <label className="block text-sm font-medium mb-2">
+                    Canva Presentation
+                </label>
+
+                <input
+                    type="text"
+                    value={presentationUrl}
+                    onChange={(e) => setPresentationUrl(e.target.value)}
+                    placeholder="https://www.canva.com/design/XXXX/embed"
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+
+                <p className="text-xs text-gray-500 mt-1">
+                    Paste Canva embed link (Share → Embed)
+                </p>
+            </div>
 
             <div>
                 <label className="block text-sm font-medium mb-3">Cover Image</label>

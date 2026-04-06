@@ -108,7 +108,7 @@ export default async function BlogsPage() {
       <div className="mb-16 flex flex-col md:flex-row md:items-center md:justify-between gap-8">
         <div>
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-            CAP All-Hands Blog
+            Blogs
           </h1>
           <p className="mt-4 text-gray-500 max-w-xl">
             Insights, updates, and stories from our team.
