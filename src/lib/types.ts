@@ -24,7 +24,7 @@ export interface Blog {
   created_at: string
   author_id: string
   published: boolean
-   profile?: {
+  profile?: {
     display_name: string
     avatar_url: string | null
   }
@@ -41,27 +41,13 @@ export interface GalleryItem {
     display_name: string
     avatar_url: string | null
   }
+  interactions: Interaction[]
 }
 
 export type InteractionType = 'like' | 'participant' | 'host' | 'comment'
-export type TargetType = 'events' | 'blog' | 'review' // extend as needed
+export type TargetType = 'events' | 'blog' | 'review' | 'gallery'// extend as needed
 
-export interface Event {
-  id: string
-  creator_id: string
-  title: string
-  description: string | null
-  event_date: string
-  location: string | null
-  image_url: string | null
-  image_storage_path: string | null
-  created_at: string
-  updated_at: string
-  profile?: {
-    display_name: string
-    avatar_url: string | null
-  }
-}
+
 
 export interface Interaction {
   id: string
@@ -69,10 +55,18 @@ export interface Interaction {
   target_id: string
   target_type: TargetType
   interaction_type: InteractionType
-  payload: Record<string, unknown>
+  payload: {
+    text?: string
+    [key: string]: unknown
+  }
   created_at: string
-}
 
+
+  profile?: {
+    display_name: string
+    avatar_url: string | null
+  }
+}
 
 
 export interface EventSection {
