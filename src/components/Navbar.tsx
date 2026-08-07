@@ -49,7 +49,7 @@ export default function Navbar({
           <Logo />
 
           {/* DESKTOP NAV */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden lg:flex items-center gap-6">
             <nav className="flex items-center gap-5 mr-2">
               {navItems.map((item) => (
                 (!item.authRequired || currentUser) && (
@@ -93,7 +93,7 @@ export default function Navbar({
           {/* MOBILE TOGGLE */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-accent-50 active:scale-95 text-slate-600 transition"
+            className="lg:hidden p-2 rounded-lg hover:bg-accent-50 active:scale-95 text-slate-600 transition"
             aria-label="Toggle Menu"
           >
             {mobileOpen ? <X size={24} /> : <Menu size={24} />}
@@ -104,7 +104,7 @@ export default function Navbar({
 
       {/* MOBILE MENU */}
       <div
-        className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${mobileOpen ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'
+        className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out ${mobileOpen ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'
           }`}
       >
         <div className="bg-white border-t border-slate-200 px-5 py-5 flex flex-col gap-1 shadow-inner">
