@@ -36,6 +36,7 @@ export default function Navbar({
     { name: 'Book-Reviews', href: '/reviews', authRequired: true },
     { name: 'Blogs', href: '/blogs', authRequired: true },
     { name: 'People', href: '/people', authRequired: true },
+    { name: 'Quiz', href: '/quiz', authRequired: true },
     { name: 'Gallery', href: '/gallery', authRequired: true },
     { name: 'Profile', href: '/profile', authRequired: true },
   ]
