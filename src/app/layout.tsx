@@ -20,7 +20,7 @@ export default async function RootLayout({
     const supabase = await createClient()
     const { data } = await supabase
       .from('user_profiles')
-      .select('display_name, avatar_url')
+      .select('display_name, avatar_url, role')
       .eq('id', user.id)
       .maybeSingle()
 

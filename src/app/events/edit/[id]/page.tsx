@@ -23,7 +23,15 @@ export default async function EditEventPage({ params }: EditEventPageProps) {
   if (error || !event) notFound()
 
   // Only creator can edit
-  if (event.creator_id !== user.id) notFound()
+  const { data: currentProfile } = await supabase
+    .from('user_profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+  const isAdmin = currentProfile?.role === 'admin'
+
+  // Creators and administrators can edit. RLS remains the database boundary.
+  if (event.creator_id !== user.id && !isAdmin) notFound()
 
   return (
     <section className="max-w-5xl mx-auto py-10 px-4 sm:px-6 space-y-8">
@@ -32,7 +40,7 @@ export default async function EditEventPage({ params }: EditEventPageProps) {
       <div className="flex items-center justify-between">
         <div>
           <Link
-            href={`/events/${event.id}`}
+            href={isAdmin ? '/admin/events' : `/events/${event.id}`}
             className="text-sm text-blue-600 hover:underline"
           >
             ← Back to Event
