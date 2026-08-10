@@ -1,44 +1,28 @@
 import QuizGame from '@/components/quiz/QuizGame'
-import type { SpinnerParticipant } from '@/components/people/useParticipantSpinner'
 import { protectRoute } from '@/lib/auth'
-import { createClient } from '@/lib/supabase/server'
 
 export const metadata = {
-  title: 'Quiz - CAP All-Hands',
+  title: 'Spin the Stack - CAP All-Hands',
 }
 
 export default async function QuizPage() {
   await protectRoute()
-  const supabase = await createClient()
-
-  const { data, error } = await supabase
-    .from('user_profiles')
-    .select('id, display_name, avatar_url, bio')
-    .order('display_name', { ascending: true })
-
-  if (error) {
-    return (
-      <section className="max-w-6xl mx-auto py-8">
-        <div className="bg-white border rounded-2xl shadow-sm p-8 text-center">
-          <p className="text-red-600 font-medium">Unable to load the quiz</p>
-          <p className="text-sm text-gray-500 mt-2">Please try again in a moment.</p>
-        </div>
-      </section>
-    )
-  }
-
-  const participants = (data ?? []) as SpinnerParticipant[]
 
   return (
-    <section className="max-w-6xl mx-auto space-y-8 py-4">
-      <div>
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900">Team Quiz</h1>
-        <p className="text-gray-600 mt-2">
-          Spin for a participant, answer the question, and keep the round moving.
+    <section className="mx-auto max-w-6xl space-y-8 py-2 sm:py-4">
+      <header className="mx-auto max-w-3xl text-center">
+        <p className="inline-flex rounded-full bg-orange-100 px-4 py-1.5 text-xs font-black uppercase tracking-[0.2em] text-orange-700">
+          All-Hands Warm-Up
         </p>
-      </div>
+        <h1 className="mt-5 text-4xl font-black tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
+          Spin the Stack
+        </h1>
+        <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-slate-600 sm:text-lg">
+          Forty riddles about the words we all say in meetings. Give it a spin, read it out, and let the room guess.
+        </p>
+      </header>
 
-      <QuizGame participants={participants} />
+      <QuizGame />
     </section>
   )
 }

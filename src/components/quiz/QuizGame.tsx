@@ -1,210 +1,185 @@
 'use client'
 
-import { useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
-import { HelpCircle, Play, RotateCcw, Sparkles } from 'lucide-react'
-import useParticipantSpinner, {
-  type SpinnerParticipant,
-} from '@/components/people/useParticipantSpinner'
-import { quizQuestions } from '@/lib/quizQuestions'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { RotateCcw } from 'lucide-react'
+import RiddleCard from '@/components/quiz/RiddleCard'
+import SpinWheel from '@/components/quiz/SpinWheel'
+import {
+  quizCategories,
+  type QuizCategory,
+  type QuizRiddle,
+} from '@/lib/quizQuestions'
 
-interface QuizGameProps {
-  participants: SpinnerParticipant[]
+type GameView = 'wheel' | 'riddle'
+type UsedRiddlesByCategory = Record<string, string[]>
+
+const SEGMENT_ANGLE = 360 / quizCategories.length
+
+function randomItem<T>(items: T[]) {
+  return items[Math.floor(Math.random() * items.length)]
 }
 
-export default function QuizGame({ participants }: QuizGameProps) {
-  const [questionIndex, setQuestionIndex] = useState(0)
-  const {
-    status,
-    remainingParticipants,
-    selectedParticipant,
-    flickerParticipant,
-    spinNext,
-    reset: resetSpinner,
-  } = useParticipantSpinner(participants)
+export default function QuizGame() {
+  const reduceMotion = Boolean(useReducedMotion())
+  const [view, setView] = useState<GameView>('wheel')
+  const [isSpinning, setIsSpinning] = useState(false)
+  const [rotation, setRotation] = useState(0)
+  const [pendingCategoryIndex, setPendingCategoryIndex] = useState<number | null>(null)
+  const [lastCategoryIndex, setLastCategoryIndex] = useState<number | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<QuizCategory | null>(null)
+  const [selectedRiddle, setSelectedRiddle] = useState<QuizRiddle | null>(null)
+  const [answerRevealed, setAnswerRevealed] = useState(false)
+  const [usedRiddleIds, setUsedRiddleIds] = useState<UsedRiddlesByCategory>({})
+  const transitionTimer = useRef<number | null>(null)
 
-  const currentQuestion = quizQuestions[questionIndex]
-  const turnsTaken = participants.length - remainingParticipants.length
-  const roundComplete = status === 'speaking' && remainingParticipants.length === 0
-  const isSpinning = status === 'selecting'
+  const clearTransitionTimer = useCallback(() => {
+    if (transitionTimer.current !== null) {
+      window.clearTimeout(transitionTimer.current)
+      transitionTimer.current = null
+    }
+  }, [])
 
-  const nextQuestion = () => {
-    setQuestionIndex((current) => (current + 1) % quizQuestions.length)
+  useEffect(() => clearTransitionTimer, [clearTransitionTimer])
+
+  const spin = () => {
+    if (isSpinning) return
+
+    clearTransitionTimer()
+    const eligibleCategoryIndexes = quizCategories
+      .map((_, index) => index)
+      .filter((index) => index !== lastCategoryIndex)
+    const categoryIndex = randomItem(eligibleCategoryIndexes)
+    const normalizedRotation = ((rotation % 360) + 360) % 360
+    const targetPosition = ((-categoryIndex * SEGMENT_ANGLE) % 360 + 360) % 360
+    const alignmentDelta = (targetPosition - normalizedRotation + 360) % 360
+    const fullRotations = reduceMotion ? 0 : 5 + Math.floor(Math.random() * 3)
+    const reducedMotionNudge = reduceMotion && alignmentDelta === 0 ? 360 : 0
+
+    setSelectedCategory(null)
+    setPendingCategoryIndex(categoryIndex)
+    setIsSpinning(true)
+    setRotation((current) => current + fullRotations * 360 + alignmentDelta + reducedMotionNudge)
   }
 
-  const resetQuiz = () => {
-    setQuestionIndex(0)
-    resetSpinner()
-  }
+  const completeSpin = () => {
+    if (!isSpinning || pendingCategoryIndex === null) return
 
-  if (participants.length === 0) {
-    return (
-      <div className="bg-white border border-dashed rounded-2xl p-12 text-center">
-        <p className="text-gray-700 font-medium">No participants available</p>
-        <p className="text-sm text-gray-500 mt-2">
-          Team members will appear here once they complete their profiles.
-        </p>
-      </div>
+    const category = quizCategories[pendingCategoryIndex]
+    const usedInCurrentCycle = usedRiddleIds[category.id] ?? []
+    const unusedRiddles = category.riddles.filter(
+      (riddle) => !usedInCurrentCycle.includes(riddle.id),
+    )
+    const availableRiddles = unusedRiddles.length > 0 ? unusedRiddles : category.riddles
+    const riddle = randomItem(availableRiddles)
+
+    setUsedRiddleIds((current) => ({
+      ...current,
+      [category.id]: unusedRiddles.length > 0
+        ? [...(current[category.id] ?? []), riddle.id]
+        : [riddle.id],
+    }))
+    setSelectedCategory(category)
+    setSelectedRiddle(riddle)
+    setLastCategoryIndex(pendingCategoryIndex)
+    setPendingCategoryIndex(null)
+    setAnswerRevealed(false)
+    setIsSpinning(false)
+
+    transitionTimer.current = window.setTimeout(
+      () => setView('riddle'),
+      reduceMotion ? 150 : 700,
     )
   }
 
+  const nextSpin = () => {
+    clearTransitionTimer()
+    setView('wheel')
+    setSelectedCategory(null)
+    setSelectedRiddle(null)
+    setAnswerRevealed(false)
+  }
+
+  const resetRound = () => {
+    clearTransitionTimer()
+    setView('wheel')
+    setIsSpinning(false)
+    setRotation(0)
+    setPendingCategoryIndex(null)
+    setLastCategoryIndex(null)
+    setSelectedCategory(null)
+    setSelectedRiddle(null)
+    setAnswerRevealed(false)
+    setUsedRiddleIds({})
+  }
+
   return (
-    <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
-      <div className="h-1.5 bg-gray-100">
-        <motion.div
-          className="h-full bg-orange-500"
-          animate={{ width: `${(turnsTaken / participants.length) * 100}%` }}
-          transition={{ duration: 0.5, ease: 'easeInOut' }}
-        />
-      </div>
-
-      <div className="grid lg:grid-cols-2">
-        <section className="relative min-h-[360px] overflow-hidden border-b lg:border-b-0 lg:border-r p-6 sm:p-8 flex flex-col items-center justify-center text-center">
-          <AnimatePresence>
-            {isSpinning && (
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-br from-orange-50 to-red-50"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              />
-            )}
-          </AnimatePresence>
-
-          <div className="relative z-10 w-full max-w-sm">
-            <p className="text-xs font-bold uppercase tracking-widest text-orange-500 mb-6">
-              {isSpinning ? 'Picking a participant...' : 'Participant spinner'}
-            </p>
-
-            <AnimatePresence mode="wait">
-              {isSpinning ? (
-                <motion.div
-                  key="spinning"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1, y: [-4, 4, -4] }}
-                  exit={{ opacity: 0, scale: 1.15, filter: 'blur(8px)' }}
-                  transition={{ y: { repeat: Infinity, duration: 0.2 } }}
-                >
-                  <ParticipantAvatar participant={flickerParticipant} muted />
-                  <h2 className="mt-5 text-2xl sm:text-3xl font-extrabold tracking-wide text-gray-400 break-words">
-                    {flickerParticipant?.display_name.toUpperCase()}
-                  </h2>
-                </motion.div>
-              ) : selectedParticipant ? (
-                <motion.div
-                  key={selectedParticipant.id}
-                  initial={{ opacity: 0, scale: 0.6, rotate: -8 }}
-                  animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                  transition={{ type: 'spring', damping: 12, stiffness: 100 }}
-                >
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-bold uppercase tracking-wider mb-5">
-                    <Sparkles className="w-3 h-3" /> Selected participant
-                  </span>
-                  <ParticipantAvatar participant={selectedParticipant} />
-                  <h2 className="mt-5 text-3xl sm:text-4xl font-black tracking-tight text-gray-900 break-words">
-                    {selectedParticipant.display_name}
-                  </h2>
-                  <p className="mt-2 text-sm text-gray-500">
-                    {roundComplete
-                      ? 'Everyone has had a turn. Reset to start a new round.'
-                      : `${remainingParticipants.length} participant${remainingParticipants.length === 1 ? '' : 's'} left this round`}
-                  </p>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="ready"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <div className="w-28 h-28 mx-auto rounded-full bg-orange-50 border-4 border-orange-100 flex items-center justify-center text-5xl">
-                    ?
-                  </div>
-                  <h2 className="mt-5 text-2xl sm:text-3xl font-bold text-gray-900">Who will answer?</h2>
-                  <p className="mt-2 text-sm text-gray-500">Spin to choose from {participants.length} team members.</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </section>
-
-        <section className="p-6 sm:p-8 lg:p-10 flex flex-col min-h-[360px]">
-          <div className="flex items-center justify-between gap-4 mb-8">
-            <span className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600">
-              <HelpCircle className="w-5 h-5" />
-              Question {questionIndex + 1} of {quizQuestions.length}
-            </span>
-            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-              {currentQuestion.category}
-            </span>
-          </div>
-
-          <motion.div
-            key={currentQuestion.id}
-            initial={{ opacity: 0, y: 12 }}
+    <div className="relative">
+      <AnimatePresence mode="wait">
+        {view === 'wheel' ? (
+          <motion.section
+            key="wheel"
+            aria-labelledby="wheel-heading"
+            initial={reduceMotion ? false : { opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex-1 flex items-center"
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -12 }}
+            className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white px-3 py-7 shadow-soft sm:px-8 sm:py-10"
           >
-            <h2 className="text-2xl sm:text-3xl font-bold leading-tight text-gray-900">
-              {currentQuestion.prompt}
-            </h2>
-          </motion.div>
+            <div className="pointer-events-none absolute -left-28 top-8 h-72 w-72 rounded-full bg-primary-500/10 blur-3xl" />
+            <div className="pointer-events-none absolute -right-24 bottom-0 h-64 w-64 rounded-full bg-orange-400/10 blur-3xl" />
 
-          <div className="mt-10 grid sm:grid-cols-2 gap-3">
+            <div className="relative text-center">
+              <h2 id="wheel-heading" className="text-lg font-bold text-slate-900 sm:text-xl">
+                Spin for a category
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">The pointer decides what the room gets next.</p>
+            </div>
+
+            <SpinWheel
+              categories={quizCategories}
+              rotation={rotation}
+              isSpinning={isSpinning}
+              reduceMotion={reduceMotion}
+              selectedCategoryId={selectedCategory?.id ?? null}
+              onSpin={spin}
+              onSpinComplete={completeSpin}
+            />
+
+            <div className="relative mt-7 min-h-10 text-center" role="status" aria-live="polite">
+              {isSpinning ? (
+                <p className="font-semibold text-slate-600">Finding the next category…</p>
+              ) : selectedCategory ? (
+                <p className="inline-flex rounded-full bg-slate-950 px-5 py-2 text-sm font-bold text-white shadow-lg">
+                  {selectedCategory.name} selected
+                </p>
+              ) : (
+                <p className="text-sm text-slate-500">Eight categories. Forty riddles. One room guessing.</p>
+              )}
+            </div>
+
             <button
               type="button"
-              onClick={spinNext}
-              disabled={isSpinning || roundComplete}
-              className="inline-flex items-center justify-center gap-2 bg-orange-500 text-white px-5 py-3 rounded-xl font-semibold shadow-md shadow-orange-500/20 hover:bg-orange-600 active:scale-[0.98] transition-all disabled:cursor-not-allowed disabled:bg-gray-300 disabled:shadow-none"
-            >
-              <Play className="w-4 h-4 fill-current" />
-              {isSpinning ? 'Spinning...' : roundComplete ? 'Round complete' : 'Spin'}
-            </button>
-            <button
-              type="button"
-              onClick={nextQuestion}
+              onClick={resetRound}
               disabled={isSpinning}
-              className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
+              className="relative mx-auto mt-3 flex min-h-10 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Next Question
+              <RotateCcw className="h-4 w-4" aria-hidden="true" />
+              Reset Round
             </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={resetQuiz}
-            disabled={isSpinning}
-            className="mt-4 self-center inline-flex items-center gap-1.5 py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <RotateCcw className="w-4 h-4" /> Reset quiz
-          </button>
-        </section>
-      </div>
-    </div>
-  )
-}
-
-function ParticipantAvatar({
-  participant,
-  muted = false,
-}: {
-  participant: SpinnerParticipant | null
-  muted?: boolean
-}) {
-  const avatarClassName = `w-28 h-28 sm:w-32 sm:h-32 mx-auto rounded-full border-4 border-white shadow-xl object-cover ${muted ? 'opacity-80' : ''}`
-
-  if (participant?.avatar_url) {
-    return (
-      <img
-        src={participant.avatar_url}
-        alt={participant.display_name}
-        className={avatarClassName}
-      />
-    )
-  }
-
-  return (
-    <div className={`${avatarClassName} bg-orange-100 flex items-center justify-center text-4xl font-bold text-orange-600`}>
-      {participant?.display_name.charAt(0).toUpperCase() || '?'}
+          </motion.section>
+        ) : selectedCategory && selectedRiddle ? (
+          <RiddleCard
+            key={selectedRiddle.id}
+            category={selectedCategory}
+            riddle={selectedRiddle}
+            answerRevealed={answerRevealed}
+            reduceMotion={reduceMotion}
+            onReveal={() => setAnswerRevealed(true)}
+            onNextSpin={nextSpin}
+            onReset={resetRound}
+          />
+        ) : null}
+      </AnimatePresence>
     </div>
   )
 }

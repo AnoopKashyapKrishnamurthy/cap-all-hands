@@ -256,20 +256,16 @@ export function ProfileSkeleton() {
 export function QuizSkeleton() {
   return (
     <Shell className="mx-auto max-w-6xl space-y-8 py-4" label="Loading quiz">
-      <HeaderSkeleton action={false} />
-      <div className="grid overflow-hidden rounded-2xl border bg-white lg:grid-cols-2">
-        <div className="flex min-h-[360px] flex-col items-center justify-center gap-5 border-b p-8 lg:border-b-0 lg:border-r">
-          <Skeleton className="h-4 w-40" />
-          <Skeleton className="h-32 w-32 rounded-full" />
-          <Skeleton className="h-8 w-52" />
-        </div>
-        <div className="flex min-h-[360px] flex-col justify-between gap-8 p-8">
-          <Skeleton className="h-5 w-36" />
-          <Skeleton className="h-20 w-full" />
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </div>
+      <div className="flex flex-col items-center gap-4 text-center">
+        <Skeleton className="h-7 w-48 rounded-full" />
+        <Skeleton className="h-12 w-72 max-w-full" />
+        <Skeleton className="h-5 w-full max-w-xl" />
+      </div>
+      <div className="rounded-3xl border bg-white p-8">
+        <div className="flex flex-col items-center gap-5">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="aspect-square w-full max-w-[520px] rounded-full" />
+          <Skeleton className="h-10 w-64 max-w-full rounded-full" />
         </div>
       </div>
     </Shell>
