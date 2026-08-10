@@ -5,6 +5,9 @@ import { createClient } from '@/lib/supabase/client'
 import { useParams } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import FadeInImage from '@/components/loading/FadeInImage'
+import { ButtonLoader } from '@/components/loading/LoadingPrimitives'
+import { DetailSkeleton } from '@/components/loading/PageSkeletons'
 
 export default function ReviewDetailPage() {
   const supabase = useMemo(() => createClient(), [])
@@ -14,6 +17,7 @@ export default function ReviewDetailPage() {
 
   const [userId, setUserId] = useState<string | null>(null)
   const [review, setReview] = useState<any>(null)
+  const [initialLoading, setInitialLoading] = useState(true)
   const [profile, setProfile] = useState<any>(null)
 
   const [liked, setLiked] = useState(false)
@@ -21,6 +25,8 @@ export default function ReviewDetailPage() {
 
   const [comments, setComments] = useState<any[]>([])
   const [commentText, setCommentText] = useState('')
+  const [commentLoading, setCommentLoading] = useState(false)
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
 
   // 🔹 Initial Load
   useEffect(() => {
@@ -38,7 +44,10 @@ export default function ReviewDetailPage() {
         .eq('id', reviewId)
         .single()
 
-      if (!reviewData) return
+      if (!reviewData) {
+        setInitialLoading(false)
+        return
+      }
 
       setReview(reviewData)
 
@@ -82,10 +91,11 @@ export default function ReviewDetailPage() {
         .order('created_at', { ascending: true })
 
       setComments(commentData || [])
+      setInitialLoading(false)
     }
 
     init()
-  }, [reviewId])
+  }, [reviewId, supabase])
 
   // ❤️ Toggle Like (safe)
   const toggleLike = async () => {
@@ -130,7 +140,8 @@ export default function ReviewDetailPage() {
 
   // 💬 Add Comment (PRODUCTION SAFE)
   const addComment = async () => {
-    if (!commentText.trim() || !userId) return
+    if (!commentText.trim() || !userId || commentLoading) return
+    setCommentLoading(true)
 
     const text = commentText
 
@@ -171,6 +182,7 @@ export default function ReviewDetailPage() {
     if (error) {
       console.error(error)
       setComments((prev) => prev.filter((c) => c.id !== tempId))
+      setCommentLoading(false)
       return
     }
 
@@ -184,15 +196,27 @@ export default function ReviewDetailPage() {
           : c
       )
     )
+    setCommentLoading(false)
   }
 
   // 🗑 Delete Comment
   const deleteComment = async (id: string) => {
+    if (deletingCommentId) return
+    setDeletingCommentId(id)
     await supabase.from('interactions').delete().eq('id', id)
     setComments((prev) => prev.filter((c) => c.id !== id))
+    setDeletingCommentId(null)
   }
 
-  if (!review) return null
+  if (initialLoading) return <DetailSkeleton />
+
+  if (!review) {
+    return (
+      <div className="mx-auto max-w-3xl rounded-2xl border bg-white p-10 text-center">
+        <p className="font-medium text-slate-700">Unable to load this review.</p>
+      </div>
+    )
+  }
 
   const formattedDate = new Date(review.created_at).toLocaleDateString(
     undefined,
@@ -254,7 +278,13 @@ export default function ReviewDetailPage() {
           {review.media_urls?.length > 0 && (
             <div className="mt-6 space-y-4">
               {review.media_urls.map((url: string) => (
-                <img key={url} src={url} className="w-full rounded-xl border max-h-[400px]" />
+                <FadeInImage
+                  key={url}
+                  src={url}
+                  alt={`${review.review_title} media`}
+                  containerClassName="aspect-video w-full rounded-xl border bg-slate-50"
+                  className="h-full w-full object-contain"
+                />
               ))}
             </div>
           )}
@@ -324,9 +354,10 @@ export default function ReviewDetailPage() {
                       {isOwner && (
                         <button
                           onClick={() => deleteComment(c.id)}
+                          disabled={deletingCommentId === c.id}
                           className="text-xs text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"
                         >
-                          Delete
+                          {deletingCommentId === c.id ? <ButtonLoader label="Deleting comment" /> : 'Delete'}
                         </button>
                       )}
                     </div>
@@ -345,6 +376,7 @@ export default function ReviewDetailPage() {
             <input
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
+              disabled={commentLoading}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
@@ -356,9 +388,10 @@ export default function ReviewDetailPage() {
             />
             <button
               onClick={addComment}
-              className="bg-blue-600 text-white px-4 sm:px-5 py-2 rounded-full text-sm font-medium hover:bg-blue-700"
+              disabled={commentLoading || !commentText.trim()}
+              className="bg-blue-600 text-white px-4 sm:px-5 py-2 rounded-full text-sm font-medium hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Post
+              {commentLoading ? <ButtonLoader label="Posting comment" /> : 'Post'}
             </button>
           </div>
 

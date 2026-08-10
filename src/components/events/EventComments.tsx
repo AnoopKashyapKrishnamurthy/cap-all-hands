@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { ButtonLoader } from '@/components/loading/LoadingPrimitives'
 
 interface Comment {
   id: string
@@ -30,10 +31,11 @@ export default function EventComments({
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!text.trim()) return
+    if (!text.trim() || loading) return
     setLoading(true)
     setError(null)
 
@@ -73,6 +75,8 @@ export default function EventComments({
   }
 
   const handleDelete = async (commentId: string) => {
+    if (deletingId) return
+    setDeletingId(commentId)
     await supabase
       .from('interactions')
       .delete()
@@ -80,6 +84,7 @@ export default function EventComments({
       .eq('user_id', currentUserId)
 
     setComments((prev) => prev.filter((c) => c.id !== commentId))
+    setDeletingId(null)
   }
 
   return (
@@ -120,9 +125,10 @@ export default function EventComments({
                 {isOwner && (
                   <button
                     onClick={() => handleDelete(comment.id)}
+                    disabled={deletingId === comment.id}
                     className="text-xs text-red-400 mt-1 hover:underline"
                   >
-                    Delete
+                    {deletingId === comment.id ? <ButtonLoader label="Deleting comment" /> : 'Delete'}
                   </button>
                 )}
               </div>
@@ -138,7 +144,7 @@ export default function EventComments({
       </div>
 
       {/* Comment Form */}
-      <form onSubmit={handleSubmit} className="flex gap-3">
+      <form onSubmit={handleSubmit} className="flex gap-3" aria-busy={loading}>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -151,7 +157,7 @@ export default function EventComments({
           disabled={loading || !text.trim()}
           className="self-end bg-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50"
         >
-          {loading ? '...' : 'Post'}
+          {loading ? <ButtonLoader label="Posting comment" /> : 'Post'}
         </button>
       </form>
 

@@ -3,8 +3,10 @@ export const dynamic = 'force-dynamic'
 import AnimatedBackground from '@/components/AnimatedBackground'
 import './globals.css'
 import Navbar from '@/components/Navbar'
+import RouteLoadingIndicator from '@/components/loading/RouteLoadingIndicator'
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
+import { Suspense } from 'react'
 
 export default async function RootLayout({
   children,
@@ -28,6 +30,9 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body>
+        <Suspense fallback={null}>
+          <RouteLoadingIndicator />
+        </Suspense>
         <AnimatedBackground />
         <Navbar user={user} profile={profile} />
         <main className="max-w-7xl mx-auto px-6 py-16">

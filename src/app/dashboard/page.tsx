@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { protectRoute } from '@/lib/auth'
 import { BookOpen, PenSquare, Image, CalendarDays } from 'lucide-react'
+import FadeInImage from '@/components/loading/FadeInImage'
 
 export const metadata = {
   title: 'Dashboard - CAP All-Hands',
@@ -213,9 +214,10 @@ export default async function DashboardPage() {
                                 {/* Avatar */}
                                 <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-100 flex items-center justify-center text-xs font-semibold text-gray-600">
                                   {profile?.avatar_url ? (
-                                    <img
+                                    <FadeInImage
                                       src={profile.avatar_url}
                                       alt={profile?.display_name || 'User'}
+                                      containerClassName="h-full w-full rounded-full"
                                       className="w-full h-full object-cover"
                                     />
                                   ) : (

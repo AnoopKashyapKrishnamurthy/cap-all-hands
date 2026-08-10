@@ -6,6 +6,7 @@ import { Heart, MessageCircle, Trash2 } from 'lucide-react'
 import { GalleryItem } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import GalleryModal from './GalleryModal'
+import { ButtonLoader } from '@/components/loading/LoadingPrimitives'
 
 interface GalleryCardProps {
   item: GalleryItem
@@ -101,7 +102,11 @@ export default function GalleryCard({ item, currentUserId, onDelete }: GalleryCa
             disabled={likeLoading}
             className="flex items-center gap-1.5 text-white font-semibold text-sm disabled:opacity-50"
           >
-            <Heart className={`w-6 h-6 ${liked ? 'fill-red-500 stroke-red-500' : 'fill-white stroke-white'}`} />
+            {likeLoading ? (
+              <ButtonLoader label="Updating like" />
+            ) : (
+              <Heart className={`w-6 h-6 ${liked ? 'fill-red-500 stroke-red-500' : 'fill-white stroke-white'}`} />
+            )}
             <span>{likeCount}</span>
           </button>
 
@@ -145,7 +150,12 @@ export default function GalleryCard({ item, currentUserId, onDelete }: GalleryCa
                 disabled={deleting}
                 className="px-3 py-1 bg-red-500 text-white text-sm rounded"
               >
-                {deleting ? 'Deleting...' : 'Delete'}
+                {deleting ? (
+                  <span className="flex items-center gap-1.5">
+                    <ButtonLoader label="Deleting gallery post" />
+                    Deleting...
+                  </span>
+                ) : 'Delete'}
               </button>
 
               <button

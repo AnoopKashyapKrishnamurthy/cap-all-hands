@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useEffect, FormEvent, useRef, useCallback } from 'react'
+import { useState, useEffect, FormEvent, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Blog } from '@/lib/types'
 import { Bold, Italic, Heading, Link as LinkIcon, List, Quote } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { ButtonLoader } from '@/components/loading/LoadingPrimitives'
+import { startRouteTransition } from '@/components/loading/RouteLoadingIndicator'
 
 interface BlogFormProps {
   blog?: Blog
@@ -14,7 +16,7 @@ interface BlogFormProps {
 
 export default function BlogForm({ blog }: BlogFormProps) {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const isEditMode = !!blog
 
@@ -114,6 +116,7 @@ export default function BlogForm({ blog }: BlogFormProps) {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    if (loading) return
 
     if (!userId) {
       setError('You must be logged in.')
@@ -160,6 +163,7 @@ export default function BlogForm({ blog }: BlogFormProps) {
 
         if (error) throw error
 
+        startRouteTransition()
         router.push(`/blogs/${blog!.slug}`)
       } else {
         const baseSlug = generateSlug(title)
@@ -186,6 +190,7 @@ export default function BlogForm({ blog }: BlogFormProps) {
 
         if (error) throw error
 
+        startRouteTransition()
         router.push(`/blogs/${finalSlug}`)
       }
 
@@ -202,10 +207,10 @@ export default function BlogForm({ blog }: BlogFormProps) {
   const readTime = Math.ceil(wordCount / 200)
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-8" aria-busy={loading}>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm" role="alert">
           {error}
         </div>
       )}
@@ -343,7 +348,12 @@ export default function BlogForm({ blog }: BlogFormProps) {
         disabled={loading}
         className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition disabled:opacity-50"
       >
-        {loading ? (isEditMode ? 'Updating...' : 'Publishing...') : (isEditMode ? 'Update Blog' : 'Create Blog')}
+        {loading ? (
+          <span className="flex items-center justify-center gap-2">
+            <ButtonLoader label={coverFile ? 'Uploading cover and saving blog' : 'Saving blog'} />
+            {coverFile ? 'Uploading & saving...' : isEditMode ? 'Updating...' : 'Publishing...'}
+          </span>
+        ) : (isEditMode ? 'Update Blog' : 'Create Blog')}
       </button>
 
     </form>

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import FadeInImage from '@/components/loading/FadeInImage'
 
 export interface DirectoryUser {
   id: string
@@ -28,9 +29,10 @@ export default function UserCard({ user, showEmail = true }: UserCardProps) {
     <article className="bg-white border rounded-2xl shadow-sm p-6 h-full flex flex-col hover:shadow-md transition">
       <div className="flex items-start gap-4">
         {user.avatar_url ? (
-          <img
+          <FadeInImage
             src={user.avatar_url}
             alt={user.display_name}
+            containerClassName="h-14 w-14 flex-shrink-0 rounded-full ring-2 ring-blue-100"
             className="h-14 w-14 rounded-full object-cover ring-2 ring-blue-100"
           />
         ) : (

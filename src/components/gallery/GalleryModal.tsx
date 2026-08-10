@@ -6,6 +6,7 @@ import { X, Heart, MessageCircle, Trash2, Send, ArrowLeft } from 'lucide-react'
 import { GalleryItem, Interaction } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import { formatDistanceToNow } from 'date-fns'
+import { ButtonLoader, Skeleton } from '@/components/loading/LoadingPrimitives'
 
 interface GalleryModalProps {
     item: GalleryItem
@@ -63,6 +64,7 @@ export default function GalleryModal({
     const [comments, setComments] = useState<Interaction[]>(initialComments)
     const [commentText, setCommentText] = useState('')
     const [commentLoading, setCommentLoading] = useState(false)
+    const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
 
     // Likers panel
     const [panelView, setPanelView] = useState<PanelView>('main')
@@ -164,9 +166,12 @@ export default function GalleryModal({
     }
 
     const deleteComment = async (commentId: string) => {
+        if (deletingCommentId) return
+        setDeletingCommentId(commentId)
         await supabase.from('interactions').delete()
             .eq('id', commentId).eq('user_id', currentUserId)
         setComments((prev) => prev.filter((c) => c.id !== commentId))
+        setDeletingCommentId(null)
     }
 
     const uploader = item.profile
@@ -255,9 +260,14 @@ export default function GalleryModal({
                                             {isOwner && (
                                                 <button
                                                     onClick={() => deleteComment(comment.id)}
+                                                    disabled={deletingCommentId === comment.id}
                                                     className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all flex-shrink-0 mt-0.5"
                                                 >
-                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                    {deletingCommentId === comment.id ? (
+                                                        <ButtonLoader label="Deleting comment" />
+                                                    ) : (
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    )}
                                                 </button>
                                             )}
                                         </div>
@@ -274,13 +284,17 @@ export default function GalleryModal({
                                         disabled={likeLoading}
                                         className="transition-transform active:scale-90 disabled:opacity-50"
                                     >
-                                        <Heart
-                                            className={`w-6 h-6 transition-colors ${
-                                                localLiked
-                                                    ? 'fill-red-500 stroke-red-500'
-                                                    : 'stroke-gray-700 hover:stroke-red-400'
-                                            }`}
-                                        />
+                                        {likeLoading ? (
+                                            <ButtonLoader label="Updating like" />
+                                        ) : (
+                                            <Heart
+                                                className={`w-6 h-6 transition-colors ${
+                                                    localLiked
+                                                        ? 'fill-red-500 stroke-red-500'
+                                                        : 'stroke-gray-700 hover:stroke-red-400'
+                                                }`}
+                                            />
+                                        )}
                                     </button>
                                     <button onClick={() => inputRef.current?.focus()}>
                                         <MessageCircle className="w-6 h-6 stroke-gray-700 hover:stroke-blue-400 transition-colors" />
@@ -322,7 +336,7 @@ export default function GalleryModal({
                                     disabled={!commentText.trim() || commentLoading}
                                     className="text-blue-500 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                 >
-                                    <Send className="w-4 h-4" />
+                                    {commentLoading ? <ButtonLoader label="Posting comment" /> : <Send className="w-4 h-4" />}
                                 </button>
                             </form>
                         </>
@@ -348,9 +362,9 @@ export default function GalleryModal({
                                 {likersLoading ? (
                                     <div className="flex flex-col gap-3 pt-2">
                                         {[...Array(3)].map((_, i) => (
-                                            <div key={i} className="flex items-center gap-3 animate-pulse">
-                                                <div className="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0" />
-                                                <div className="h-3 bg-gray-200 rounded w-32" />
+                                            <div key={i} className="flex items-center gap-3">
+                                                <Skeleton className="h-10 w-10 flex-shrink-0 rounded-full" />
+                                                <Skeleton className="h-3 w-32" />
                                             </div>
                                         ))}
                                     </div>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { ButtonLoader } from '@/components/loading/LoadingPrimitives'
 
 interface EventInteractionsProps {
   eventId: string
@@ -71,8 +72,11 @@ export default function EventInteractions({
             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
         } disabled:opacity-50 disabled:cursor-not-allowed`}
       >
-        <span>{liked ? '❤️' : '🤍'}</span>
-        {liked ? 'Liked' : 'Like'}
+        {likeLoading ? (
+          <ButtonLoader label="Updating like" />
+        ) : (
+          <><span>{liked ? '❤️' : '🤍'}</span>{liked ? 'Liked' : 'Like'}</>
+        )}
       </button>
 
       {!isPast && (
@@ -85,8 +89,11 @@ export default function EventInteractions({
               : 'bg-blue-600 text-white hover:bg-blue-700'
           } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          <span>{joined ? '✅' : '+'}</span>
-          {joined ? 'Joined — leave?' : 'Join event'}
+          {joinLoading ? (
+            <ButtonLoader label="Updating attendance" />
+          ) : (
+            <><span>{joined ? '✅' : '+'}</span>{joined ? 'Joined — leave?' : 'Join event'}</>
+          )}
         </button>
       )}
     </div>

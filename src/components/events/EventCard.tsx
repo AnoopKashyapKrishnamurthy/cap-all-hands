@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Event } from '@/lib/types'
+import FadeInImage from '@/components/loading/FadeInImage'
+import { ButtonLoader } from '@/components/loading/LoadingPrimitives'
+import { startRouteTransition } from '@/components/loading/RouteLoadingIndicator'
 
 interface EventCardProps {
   event: Event
@@ -112,14 +115,23 @@ export default function EventCard({
 
   return (
     <div
-      onClick={() => router.push(`/events/${event.id}`)}
+      onClick={() => {
+        startRouteTransition()
+        router.push(`/events/${event.id}`)
+      }}
       tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter') router.push(`/events/${event.id}`) }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          startRouteTransition()
+          router.push(`/events/${event.id}`)
+        }
+      }}
       className={`cursor-pointer bg-white rounded-2xl border shadow-sm hover:shadow-md transition-all duration-200 flex flex-col h-full overflow-hidden ${isPast ? 'opacity-60' : ''}`}
     >
       <div className="h-44 w-full overflow-hidden bg-gradient-to-br from-blue-500 to-indigo-600 flex-shrink-0">
         {event.image_url ? (
-          <img src={event.image_url} alt={event.title}
+          <FadeInImage src={event.image_url} alt={event.title}
+            containerClassName="h-full w-full"
             className="h-full w-full object-cover hover:scale-105 transition-transform duration-500" />
         ) : (
           <div className="h-full w-full flex items-center justify-center text-white text-lg font-semibold px-6 text-center">
@@ -182,7 +194,7 @@ export default function EventCard({
                 : 'text-gray-500 hover:bg-gray-100'
             } disabled:opacity-50`}
           >
-            {liked ? '❤️' : '🤍'} Like
+            {likeLoading ? <ButtonLoader label="Updating like" /> : <>{liked ? '❤️' : '🤍'} Like</>}
           </button>
 
           {!isPast && (
@@ -195,7 +207,7 @@ export default function EventCard({
                   : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
               } disabled:opacity-50`}
             >
-              {joined ? '✅ Joined' : '+ Join'}
+              {joinLoading ? <ButtonLoader label="Updating attendance" /> : joined ? '✅ Joined' : '+ Join'}
             </button>
           )}
 
@@ -222,7 +234,12 @@ export default function EventCard({
                     disabled={deleting}
                     className="text-xs text-red-600 font-medium disabled:opacity-50"
                   >
-                    {deleting ? 'Deleting…' : 'Confirm'}
+                    {deleting ? (
+                      <span className="flex items-center gap-1.5">
+                        <ButtonLoader label="Deleting event" />
+                        Deleting…
+                      </span>
+                    ) : 'Confirm'}
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); setConfirming(false) }}

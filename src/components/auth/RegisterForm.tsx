@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { ButtonLoader } from '@/components/loading/LoadingPrimitives';
 
 export default function RegisterForm() {
   const [email, setEmail] = useState('');
@@ -35,6 +36,7 @@ export default function RegisterForm() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (loading) return;
     setError(null);
     setSuccess(false);
 
@@ -62,31 +64,23 @@ export default function RegisterForm() {
       }
 
       setSuccess(true);
-      setLoading(false);
-      setEmail('');
-      setPassword('');
-      setConfirmPassword('');
-
-      // Redirect to login after success
-      setTimeout(() => {
-        router.push('/login?message=Check your email to confirm your account');
-      }, 2000);
-    } catch (err) {
+      router.push('/login?message=Check your email to confirm your account');
+    } catch {
       setError('An unexpected error occurred. Please try again.');
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6" aria-busy={loading}>
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg" role="alert">
           <p className="text-red-800 font-medium">{error}</p>
         </div>
       )}
 
       {success && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+        <div className="p-4 bg-green-50 border border-green-200 rounded-lg" role="status" aria-live="polite">
           <p className="text-green-800 font-medium">
             Account created! Redirecting to login...
           </p>
@@ -158,7 +152,12 @@ export default function RegisterForm() {
         disabled={loading}
         className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {loading ? 'Creating account...' : 'Sign Up'}
+        {loading ? (
+          <span className="flex items-center gap-2">
+            <ButtonLoader label="Creating account" />
+            Creating account...
+          </span>
+        ) : 'Sign Up'}
       </button>
 
       <div className="text-center">
