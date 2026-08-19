@@ -3,14 +3,31 @@ import { createClient } from '@/lib/supabase/server'
 import { protectRoute } from '@/lib/auth'
 import { BookOpen, PenSquare, Image, CalendarDays } from 'lucide-react'
 import FadeInImage from '@/components/loading/FadeInImage'
+import { getSiteSectionSettings, isSiteSectionKey, sectionStateFromSettings, SITE_SECTIONS, type SiteSectionKey } from '@/lib/access-control'
 
 export const metadata = {
   title: 'Dashboard - CAP All-Hands',
 }
 
-export default async function DashboardPage() {
+type SearchParams = Promise<Record<string, string | string[] | undefined>>
+
+export default async function DashboardPage({ searchParams }: { searchParams: SearchParams }) {
+  const params = await searchParams
   const user = await protectRoute()
   const supabase = await createClient()
+
+  const [profileResult, sectionResult] = await Promise.all([
+    supabase.from('user_profiles').select('role').eq('id', user.id).maybeSingle(),
+    getSiteSectionSettings(supabase),
+  ])
+  const isAdmin = profileResult.data?.role === 'admin'
+  const sectionState = sectionStateFromSettings(sectionResult.settings)
+  const requestedSection = typeof params.section === 'string' && isSiteSectionKey(params.section)
+    ? params.section
+    : null
+  const unavailableSection = requestedSection
+    ? SITE_SECTIONS.find((section) => section.key === requestedSection)
+    : null
 
   const { data: latestReviews } = await supabase
     .from('book_reviews')
@@ -30,8 +47,16 @@ export default async function DashboardPage() {
     .limit(4)
   const safeReviews = latestReviews ?? []
 
-  const cards = [
+  const cards: Array<{
+    section: SiteSectionKey
+    title: string
+    icon: React.ReactNode
+    size: 'lg' | 'md' | 'wide'
+    desc: string
+    links: Array<{ href: string; label: string }>
+  }> = [
     {
+      section: 'reviews',
       title: 'Book Reviews',
       icon:  <BookOpen className="w-5 h-5" />,
       size: 'lg',
@@ -42,6 +67,7 @@ export default async function DashboardPage() {
       ],
     },
     {
+      section: 'blogs',
       title: 'Blogs',
       icon: <PenSquare className="w-5 h-5" />,
       size: 'md',
@@ -52,6 +78,7 @@ export default async function DashboardPage() {
       ],
     },
     {
+      section: 'gallery',
       title: 'Gallery',
       icon:  <Image className="w-5 h-5" />,
       size: 'md',
@@ -62,6 +89,7 @@ export default async function DashboardPage() {
       ],
     },
     {
+      section: 'events',
       title: 'Events',
       icon: <CalendarDays className="w-5 h-5" />,
       size: 'wide',
@@ -72,6 +100,8 @@ export default async function DashboardPage() {
       ],
     },
   ]
+
+  const visibleCards = cards.filter((card) => isAdmin || sectionState[card.section])
 
   type LinkItem = {
     href: string
@@ -132,10 +162,16 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      {params.notice === 'section-disabled' && unavailableSection && (
+        <div role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          {unavailableSection.label} is currently disabled by an administrator.
+        </div>
+      )}
+
       {/* Bento Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[minmax(240px,auto)] grid-flow-row-dense">
 
-        {cards.map((card, i) => (
+        {visibleCards.map((card, i) => (
           <div
             key={i}
             className={`
@@ -283,6 +319,12 @@ export default async function DashboardPage() {
         ))}
 
       </div>
+
+      {!visibleCards.length && (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center text-sm text-slate-500">
+          No community sections are currently enabled. Contact an administrator if you need access.
+        </div>
+      )}
 
       {/* Footer */}
       <div className="pt-8 mt-12 border-t border-gray-200/60 text-center text-gray-400 text-sm font-medium">

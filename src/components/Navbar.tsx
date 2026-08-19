@@ -6,13 +6,15 @@ import { usePathname } from 'next/navigation'
 import { Menu, ShieldCheck, X } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import type { UserRole } from '@/lib/auth'
+import type { SiteSectionKey, SiteSectionState } from '@/lib/access-control'
 import LogoutButton from './auth/LogoutButton'
 import ProfileDropdown from './auth/ProfieDropdown'
 import Logo from './Logo'
 
 export default function Navbar({
   user,
-  profile
+  profile,
+  sections,
 }: {
   user: User | null
   profile: {
@@ -20,6 +22,7 @@ export default function Navbar({
     avatar_url: string | null
     role: UserRole
   } | null
+  sections: SiteSectionState
 }) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -38,16 +41,27 @@ export default function Navbar({
   }, [pathname])
 
   const navItems = [
-    { name: 'Dashboard', href: '/dashboard', authRequired: true, adminOnly: false },
-    { name: 'Events', href: '/events', authRequired: true, adminOnly: false },
-    { name: 'Book-Reviews', href: '/reviews', authRequired: true, adminOnly: false },
-    { name: 'Blogs', href: '/blogs', authRequired: true, adminOnly: false },
-    { name: 'People', href: '/people', authRequired: true, adminOnly: false },
-    { name: 'Quiz', href: '/quiz', authRequired: true, adminOnly: false },
-    { name: 'Gallery', href: '/gallery', authRequired: true, adminOnly: false },
-    { name: 'Profile', href: '/profile', authRequired: true, adminOnly: false },
-    { name: 'Admin', href: '/admin', authRequired: true, adminOnly: true },
-  ]
+    { name: 'Dashboard', href: '/dashboard', authRequired: true, adminOnly: false, section: null },
+    { name: 'Events', href: '/events', authRequired: true, adminOnly: false, section: 'events' },
+    { name: 'Book-Reviews', href: '/reviews', authRequired: true, adminOnly: false, section: 'reviews' },
+    { name: 'Blogs', href: '/blogs', authRequired: true, adminOnly: false, section: 'blogs' },
+    { name: 'People', href: '/people', authRequired: true, adminOnly: false, section: 'people' },
+    { name: 'Quiz', href: '/quiz', authRequired: true, adminOnly: false, section: 'quiz' },
+    { name: 'Gallery', href: '/gallery', authRequired: true, adminOnly: false, section: 'gallery' },
+    { name: 'Profile', href: '/profile', authRequired: true, adminOnly: false, section: null },
+    { name: 'Admin', href: '/admin', authRequired: true, adminOnly: true, section: null },
+  ] satisfies Array<{
+    name: string
+    href: string
+    authRequired: boolean
+    adminOnly: boolean
+    section: SiteSectionKey | null
+  }>
+
+  const canSeeItem = (item: (typeof navItems)[number]) =>
+    (!item.authRequired || currentUser)
+    && (!item.adminOnly || isAdmin)
+    && (!item.section || isAdmin || sections[item.section])
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-slate-200 shadow-sm">
@@ -60,7 +74,7 @@ export default function Navbar({
           <div className="hidden lg:flex items-center gap-6">
             <nav className="flex items-center gap-5 mr-2">
               {navItems.map((item) => (
-                (!item.authRequired || currentUser) && (!item.adminOnly || isAdmin) && (
+                canSeeItem(item) && (
                   <Link
                     key={item.href}
                     href={item.href}
@@ -142,7 +156,7 @@ export default function Navbar({
           </Link>
 
           {navItems.map((item) => (
-            (!item.authRequired || currentUser) && (!item.adminOnly || isAdmin) && (
+            canSeeItem(item) && (
               <Link
                 key={item.href}
                 href={item.href}

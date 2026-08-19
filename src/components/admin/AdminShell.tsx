@@ -14,7 +14,7 @@ import {
 import type { ReactNode } from 'react'
 
 const items = [
-  { href: '/admin', label: 'Overview', icon: LayoutDashboard },
+  { href: '/admin', label: 'Control panel', icon: LayoutDashboard },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/blogs', label: 'Blogs', icon: FileText },
   { href: '/admin/reviews', label: 'Reviews', icon: BookOpen },
@@ -82,4 +82,3 @@ export default function AdminShell({
     </div>
   )
 }
-

@@ -1,7 +1,9 @@
 import Link from 'next/link'
-import { BookOpen, CalendarDays, FileText, Images, Users } from 'lucide-react'
+import { BookOpen, CalendarDays, FileText, Images, ShieldCheck, Users } from 'lucide-react'
+import { AdminSectionControls } from '@/components/admin/AdminActions'
 import AdminPage from '@/components/admin/AdminPage'
 import { AdminBadge, AdminErrorState, AdminPageHeader, AdminStatCard } from '@/components/admin/AdminUi'
+import { getSiteSectionSettings } from '@/lib/access-control'
 import { protectAdminRoute } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 
@@ -17,6 +19,7 @@ export default async function AdminOverviewPage() {
 
   const [
     users,
+    blockedUsers,
     admins,
     moderators,
     blogs,
@@ -30,6 +33,7 @@ export default async function AdminOverviewPage() {
     recentEvents,
   ] = await Promise.all([
     supabase.from('user_profiles').select('*', { count: 'exact', head: true }),
+    supabase.from('user_profiles').select('*', { count: 'exact', head: true }).eq('login_enabled', false),
     supabase.from('user_profiles').select('*', { count: 'exact', head: true }).eq('role', 'admin'),
     supabase.from('user_profiles').select('*', { count: 'exact', head: true }).eq('role', 'moderator'),
     supabase.from('blogs').select('*', { count: 'exact', head: true }),
@@ -43,13 +47,17 @@ export default async function AdminOverviewPage() {
     supabase.from('events').select('id, title, event_date, profile:user_profiles(display_name)').order('created_at', { ascending: false }).limit(4),
   ])
 
-  const hasError = [users, admins, moderators, blogs, publishedBlogs, reviews, events, upcomingEvents, gallery, recentBlogs, recentReviews, recentEvents].some((result) => result.error)
+  const { settings, error: settingsError } = await getSiteSectionSettings(supabase)
+
+  const hasError = [users, blockedUsers, admins, moderators, blogs, publishedBlogs, reviews, events, upcomingEvents, gallery, recentBlogs, recentReviews, recentEvents].some((result) => result.error)
 
   return (
     <AdminPage>
-      <AdminPageHeader title="Overview" description="A concise view of your community and its newest content." />
-      {hasError && <AdminErrorState message="Some overview data could not be loaded." />}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <AdminPageHeader title="Control panel" description="Control availability, user access, roles, and community content from one place." />
+      {(hasError || settingsError) && <AdminErrorState message="Some control panel data could not be loaded." />}
+      {!settingsError && <AdminSectionControls settings={settings} />}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <AdminStatCard label="Login access" value={(users.count ?? 0) - (blockedUsers.count ?? 0)} detail={`${blockedUsers.count ?? 0} blocked accounts`} icon={ShieldCheck} />
         <AdminStatCard label="People" value={users.count ?? 0} detail={`${admins.count ?? 0} admins · ${moderators.count ?? 0} moderators`} icon={Users} />
         <AdminStatCard label="Blogs" value={blogs.count ?? 0} detail={`${publishedBlogs.count ?? 0} published · ${(blogs.count ?? 0) - (publishedBlogs.count ?? 0)} drafts`} icon={FileText} />
         <AdminStatCard label="Reviews" value={reviews.count ?? 0} detail="Book reviews shared" icon={BookOpen} />

@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { hasLoginAccess, type SiteSectionKey } from '@/lib/access-control'
 import { createClient } from '@/lib/supabase/server'
 
 export type UserRole = 'user' | 'admin' | 'moderator'
@@ -41,6 +42,40 @@ export const protectRoute = async () => {
     redirect('/login')
   }
 
+  const supabase = await createClient()
+  const { allowed, error } = await hasLoginAccess(supabase)
+
+  if (error) {
+    console.error('Login access lookup failed:', error.message)
+  }
+
+  if (!allowed) {
+    await supabase.auth.signOut()
+    redirect('/login?error=Your account access has been disabled. Contact an administrator.')
+  }
+
+  return user
+}
+
+/**
+ * Protect every route nested under a user-facing site section.
+ * The database function also grants active administrators an explicit bypass.
+ */
+export const protectSectionRoute = async (section: SiteSectionKey) => {
+  const user = await protectRoute()
+  const supabase = await createClient()
+  const { data: allowed, error } = await supabase.rpc('can_access_section', {
+    section_key: section,
+  })
+
+  if (error) {
+    console.error(`Section access lookup failed for ${section}:`, error.message)
+  }
+
+  if (error || allowed !== true) {
+    redirect(`/dashboard?notice=section-disabled&section=${encodeURIComponent(section)}`)
+  }
+
   return user
 }
 
@@ -49,11 +84,7 @@ export const protectRoute = async () => {
  * The database profile is authoritative; browser metadata is never used.
  */
 export const protectAdminRoute = async () => {
-  const user = await getCurrentUser()
-
-  if (!user) {
-    redirect('/login')
-  }
+  const user = await protectRoute()
 
   const supabase = await createClient()
   const { data: profile, error } = await supabase

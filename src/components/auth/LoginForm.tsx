@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Eye, EyeOff } from 'lucide-react'
 import { ButtonLoader } from '@/components/loading/LoadingPrimitives'
+import { hasLoginAccess } from '@/lib/access-control'
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
@@ -36,7 +37,16 @@ export default function LoginForm() {
         return;
       }
 
-      
+      const access = await hasLoginAccess(supabase);
+      if (!access.allowed) {
+        await supabase.auth.signOut();
+        setError(access.error
+          ? 'Unable to verify account access. Please try again.'
+          : 'Your account access has been disabled. Contact an administrator.');
+        setLoading(false);
+        return;
+      }
+
       router.push('/dashboard');
       router.refresh()
 

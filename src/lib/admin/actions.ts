@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { isSiteSectionKey, SITE_SECTIONS, type SiteSectionKey } from '@/lib/access-control'
 import { protectAdminRoute, type UserRole } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { removeManagedFiles, storagePathFromPublicUrl } from './storage'
@@ -51,6 +52,91 @@ export async function updateUserRole(
   } catch (error) {
     console.error('Admin role update failed:', error)
     return failure('Unable to update the role. Check the admin database policy and try again.')
+  }
+}
+
+export async function updateUserLoginAccess(
+  userId: string,
+  enabled: boolean
+): Promise<AdminActionResult> {
+  try {
+    const { user } = await protectAdminRoute()
+    if (!userId || typeof enabled !== 'boolean') return failure('Choose a valid access setting.')
+    if (userId === user.id) return failure('You cannot disable access for your own account.')
+
+    const supabase = await createClient()
+    const { data: target, error: targetError } = await supabase
+      .from('user_profiles')
+      .select('id, login_enabled')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (targetError || !target) return failure('The selected user could not be found.')
+    if (target.login_enabled === enabled) {
+      return success(enabled ? 'Login access is already enabled.' : 'Login access is already disabled.')
+    }
+
+    const { data: updated, error } = await supabase
+      .from('user_profiles')
+      .update({ login_enabled: enabled })
+      .eq('id', userId)
+      .select('id')
+      .maybeSingle()
+
+    if (error) throw error
+    if (!updated) return failure('The database did not permit this access change.')
+
+    revalidatePath('/admin')
+    revalidatePath('/admin/users')
+    revalidatePath('/', 'layout')
+    return success(enabled ? 'Login access enabled.' : 'Login access disabled.')
+  } catch (error) {
+    console.error('Admin login access update failed:', error)
+    return failure('Unable to update login access. Check the admin database policy and try again.')
+  }
+}
+
+export async function updateSiteSection(
+  section: SiteSectionKey,
+  enabled: boolean
+): Promise<AdminActionResult> {
+  try {
+    const { user } = await protectAdminRoute()
+    if (!isSiteSectionKey(section) || typeof enabled !== 'boolean') {
+      return failure('Choose a valid site section setting.')
+    }
+
+    const supabase = await createClient()
+    const { data: current, error: lookupError } = await supabase
+      .from('site_sections')
+      .select('key, enabled')
+      .eq('key', section)
+      .maybeSingle()
+
+    if (lookupError || !current) return failure('The selected site section could not be found.')
+    if (current.enabled === enabled) {
+      return success(enabled ? 'This section is already enabled.' : 'This section is already disabled.')
+    }
+
+    const { data: updated, error } = await supabase
+      .from('site_sections')
+      .update({ enabled, updated_at: new Date().toISOString(), updated_by: user.id })
+      .eq('key', section)
+      .select('key')
+      .maybeSingle()
+
+    if (error) throw error
+    if (!updated) return failure('The database did not permit this section change.')
+
+    const route = SITE_SECTIONS.find((item) => item.key === section)?.href
+    revalidatePath('/admin')
+    revalidatePath('/dashboard')
+    revalidatePath('/', 'layout')
+    if (route) revalidatePath(route, 'layout')
+    return success(enabled ? 'Section enabled for users.' : 'Section disabled for users.')
+  } catch (error) {
+    console.error('Admin site section update failed:', error)
+    return failure('Unable to update the section. Check the admin database policy and try again.')
   }
 }
 
