@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { hasLoginAccess } from '@/lib/access-control'
 
 /**
  * OAuth callback handler
@@ -39,6 +40,15 @@ export async function GET(request: NextRequest) {
         throw exchangeError
       }
 
+      const access = await hasLoginAccess(supabase)
+      if (!access.allowed) {
+        await supabase.auth.signOut()
+        const message = access.error
+          ? 'Unable to verify account access'
+          : 'Your account access has been disabled. Contact an administrator.'
+        return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(message)}`, origin))
+      }
+
 
       // Safe redirect (prevent open redirect attacks)
       const safeRedirect =
@@ -46,7 +56,7 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.redirect(new URL(safeRedirect, origin))
 
-    } catch (err) {
+    } catch {
       return NextResponse.redirect(
         new URL('/login?error=Authentication failed', origin)
       )

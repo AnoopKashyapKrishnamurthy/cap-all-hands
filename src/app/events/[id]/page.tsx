@@ -5,6 +5,7 @@ import { protectRoute } from '@/lib/auth'
 import EventInteractions from '@/components/events/EventInteractions'
 import EventComments from '@/components/events/EventComments'
 import EventSections from '@/components/events/EventSections'
+import FadeInImage from '@/components/loading/FadeInImage'
 
 interface EventPageProps {
   params: Promise<{ id: string }>
@@ -155,9 +156,10 @@ export default async function EventPage({ params }: EventPageProps) {
       {/* Cover */}
       {event.image_url && (
         <div className="relative rounded-3xl overflow-hidden shadow-md">
-          <img
+          <FadeInImage
             src={event.image_url}
             alt={event.title}
+            containerClassName="h-80 w-full"
             className="w-full h-80 object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />

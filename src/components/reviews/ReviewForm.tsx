@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, FormEvent } from 'react'
+import { useState, useEffect, useRef, useCallback, FormEvent, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Bold, Italic, Heading, Link as LinkIcon, List, Quote } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { ButtonLoader } from '@/components/loading/LoadingPrimitives'
+import { startRouteTransition } from '@/components/loading/RouteLoadingIndicator'
 
 export default function ReviewForm() {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const [userId, setUserId] = useState<string | null>(null)
 
@@ -100,6 +102,7 @@ export default function ReviewForm() {
   // 🔹 Submit
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    if (loading) return
 
     if (!userId) {
       setError('You must be logged in.')
@@ -147,6 +150,7 @@ export default function ReviewForm() {
 
       if (error) throw error
 
+      startRouteTransition()
       router.push('/reviews')
       router.refresh()
     } catch (err) {
@@ -161,10 +165,10 @@ export default function ReviewForm() {
   const readTime = Math.ceil(wordCount / 200)
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-10">
+    <form onSubmit={handleSubmit} className="space-y-10" aria-busy={loading}>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm" role="alert">
           {error}
         </div>
       )}
@@ -304,7 +308,12 @@ export default function ReviewForm() {
         disabled={loading}
         className="w-full bg-green-600 text-white py-3 rounded-xl"
       >
-        {loading ? 'Posting...' : 'Post Review'}
+        {loading ? (
+          <span className="flex items-center justify-center gap-2">
+            <ButtonLoader label={files.length > 0 ? 'Uploading images and posting review' : 'Posting review'} />
+            {files.length > 0 ? 'Uploading & posting...' : 'Posting...'}
+          </span>
+        ) : 'Post Review'}
       </button>
 
     </form>

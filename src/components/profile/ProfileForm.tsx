@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import ChangePasswordForm from './ChangePasswordForm'
+import { ButtonLoader } from '@/components/loading/LoadingPrimitives'
+import FadeInImage from '@/components/loading/FadeInImage'
 
 interface ProfileData {
   id: string
@@ -77,6 +79,7 @@ export default function ProfileForm({ initialProfile }: ProfileFormProps) {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (loading) return
     setError(null)
     setSuccess(null)
 
@@ -155,9 +158,10 @@ export default function ProfileForm({ initialProfile }: ProfileFormProps) {
       <aside className="bg-white border rounded-2xl shadow-sm p-6 sm:p-8 space-y-6 h-fit">
         <div className="flex flex-col items-center text-center gap-4">
           {shownAvatar ? (
-            <img
+            <FadeInImage
               src={shownAvatar}
               alt={displayName || initialProfile.email}
+              containerClassName="h-28 w-28 rounded-full ring-4 ring-blue-100"
               className="h-28 w-28 rounded-full object-cover ring-4 ring-blue-100"
             />
           ) : (
@@ -188,15 +192,15 @@ export default function ProfileForm({ initialProfile }: ProfileFormProps) {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" aria-busy={loading}>
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4" role="alert">
               <p className="text-sm font-medium text-red-800">{error}</p>
             </div>
           )}
 
           {success && (
-            <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+            <div className="rounded-lg border border-green-200 bg-green-50 p-4" role="status" aria-live="polite">
               <p className="text-sm font-medium text-green-800">{success}</p>
             </div>
           )}
@@ -278,7 +282,12 @@ export default function ProfileForm({ initialProfile }: ProfileFormProps) {
               disabled={loading}
               className="inline-flex items-center justify-center bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Saving changes...' : 'Save Changes'}
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <ButtonLoader label={avatarFile ? 'Uploading avatar and saving profile' : 'Saving profile'} />
+                  {avatarFile ? 'Uploading & saving...' : 'Saving changes...'}
+                </span>
+              ) : 'Save Changes'}
             </button>
           </div>
         </form>

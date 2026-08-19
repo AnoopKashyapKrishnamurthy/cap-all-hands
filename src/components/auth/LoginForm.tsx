@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Eye, EyeOff } from 'lucide-react'
+import { ButtonLoader } from '@/components/loading/LoadingPrimitives'
+import { hasLoginAccess } from '@/lib/access-control'
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
@@ -17,6 +19,7 @@ export default function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (loading) return;
     setError(null);
     setLoading(true);
 
@@ -34,7 +37,16 @@ export default function LoginForm() {
         return;
       }
 
-      
+      const access = await hasLoginAccess(supabase);
+      if (!access.allowed) {
+        await supabase.auth.signOut();
+        setError(access.error
+          ? 'Unable to verify account access. Please try again.'
+          : 'Your account access has been disabled. Contact an administrator.');
+        setLoading(false);
+        return;
+      }
+
       router.push('/dashboard');
       router.refresh()
 
@@ -45,9 +57,9 @@ export default function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6" aria-busy={loading}>
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg" role="alert">
           <p className="text-red-800 font-medium">{error}</p>
         </div>
       )}
@@ -121,7 +133,12 @@ export default function LoginForm() {
         disabled={loading}
         className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {loading ? 'Signing in...' : 'Sign In'}
+        {loading ? (
+          <span className="flex items-center gap-2">
+            <ButtonLoader label="Signing in" />
+            Signing in...
+          </span>
+        ) : 'Sign In'}
       </button>
 
       <div className="text-center">

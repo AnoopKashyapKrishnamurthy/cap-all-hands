@@ -3,17 +3,26 @@
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
-import { Menu, X } from 'lucide-react'
+import { Menu, ShieldCheck, X } from 'lucide-react'
+import type { User } from '@supabase/supabase-js'
+import type { UserRole } from '@/lib/auth'
+import type { SiteSectionKey, SiteSectionState } from '@/lib/access-control'
 import LogoutButton from './auth/LogoutButton'
 import ProfileDropdown from './auth/ProfieDropdown'
 import Logo from './Logo'
 
 export default function Navbar({
   user,
-  profile
+  profile,
+  sections,
 }: {
-  user: any
-  profile: any
+  user: User | null
+  profile: {
+    display_name: string | null
+    avatar_url: string | null
+    role: UserRole
+  } | null
+  sections: SiteSectionState
 }) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -25,20 +34,34 @@ export default function Navbar({
 
   const email = currentUser?.email || ''
   const avatarUrl = profile?.avatar_url || null
+  const isAdmin = profile?.role === 'admin'
 
   useEffect(() => {
     setMobileOpen(false)
   }, [pathname])
 
   const navItems = [
-    { name: 'Dashboard', href: '/dashboard', authRequired: true },
-    { name: 'Events', href: '/events', authRequired: true },
-    { name: 'Book-Reviews', href: '/reviews', authRequired: true },
-    { name: 'Blogs', href: '/blogs', authRequired: true },
-    { name: 'People', href: '/people', authRequired: true },
-    { name: 'Gallery', href: '/gallery', authRequired: true },
-    { name: 'Profile', href: '/profile', authRequired: true },
-  ]
+    { name: 'Dashboard', href: '/dashboard', authRequired: true, adminOnly: false, section: null },
+    { name: 'Events', href: '/events', authRequired: true, adminOnly: false, section: 'events' },
+    { name: 'Book-Reviews', href: '/reviews', authRequired: true, adminOnly: false, section: 'reviews' },
+    { name: 'Blogs', href: '/blogs', authRequired: true, adminOnly: false, section: 'blogs' },
+    { name: 'People', href: '/people', authRequired: true, adminOnly: false, section: 'people' },
+    { name: 'Quiz', href: '/quiz', authRequired: true, adminOnly: false, section: 'quiz' },
+    { name: 'Gallery', href: '/gallery', authRequired: true, adminOnly: false, section: 'gallery' },
+    { name: 'Profile', href: '/profile', authRequired: true, adminOnly: false, section: null },
+    { name: 'Admin', href: '/admin', authRequired: true, adminOnly: true, section: null },
+  ] satisfies Array<{
+    name: string
+    href: string
+    authRequired: boolean
+    adminOnly: boolean
+    section: SiteSectionKey | null
+  }>
+
+  const canSeeItem = (item: (typeof navItems)[number]) =>
+    (!item.authRequired || currentUser)
+    && (!item.adminOnly || isAdmin)
+    && (!item.section || isAdmin || sections[item.section])
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-slate-200 shadow-sm">
@@ -48,22 +71,25 @@ export default function Navbar({
           <Logo />
 
           {/* DESKTOP NAV */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden lg:flex items-center gap-6">
             <nav className="flex items-center gap-5 mr-2">
               {navItems.map((item) => (
-                (!item.authRequired || currentUser) && (
+                canSeeItem(item) && (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`text-sm font-medium transition-all relative group/link ${pathname === item.href
+                    className={`text-sm font-medium transition-all relative group/link ${(pathname === item.href || (item.adminOnly && pathname.startsWith('/admin')))
                       ? 'text-accent-600'
                       : 'text-slate-600 hover:text-accent-600'
                       }`}
                   >
-                    {item.name}
+                    <span className="inline-flex items-center gap-1.5">
+                      {item.adminOnly && <ShieldCheck className="h-3.5 w-3.5" />}
+                      {item.name}
+                    </span>
 
                     <span
-                      className={`absolute -bottom-1 left-0 h-[2px] rounded-full bg-accent-500 transition-all duration-300 ${pathname === item.href
+                      className={`absolute -bottom-1 left-0 h-[2px] rounded-full bg-accent-500 transition-all duration-300 ${(pathname === item.href || (item.adminOnly && pathname.startsWith('/admin')))
                         ? 'w-full'
                         : 'w-0 group-hover/link:w-full'
                         }`}
@@ -92,7 +118,7 @@ export default function Navbar({
           {/* MOBILE TOGGLE */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-accent-50 active:scale-95 text-slate-600 transition"
+            className="lg:hidden p-2 rounded-lg hover:bg-accent-50 active:scale-95 text-slate-600 transition"
             aria-label="Toggle Menu"
           >
             {mobileOpen ? <X size={24} /> : <Menu size={24} />}
@@ -103,7 +129,7 @@ export default function Navbar({
 
       {/* MOBILE MENU */}
       <div
-        className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${mobileOpen ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'
+        className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out ${mobileOpen ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'
           }`}
       >
         <div className="bg-white border-t border-slate-200 px-5 py-5 flex flex-col gap-1 shadow-inner">
@@ -130,16 +156,19 @@ export default function Navbar({
           </Link>
 
           {navItems.map((item) => (
-            (!item.authRequired || currentUser) && (
+            canSeeItem(item) && (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`block text-base font-medium py-2.5 px-3 rounded-md transition ${pathname === item.href
+                className={`block text-base font-medium py-2.5 px-3 rounded-md transition ${(pathname === item.href || (item.adminOnly && pathname.startsWith('/admin')))
                   ? 'bg-accent-100 text-accent-700'
                   : 'text-slate-700 hover:bg-accent-50'
                   }`}
               >
-                {item.name}
+                <span className="inline-flex items-center gap-2">
+                  {item.adminOnly && <ShieldCheck className="h-4 w-4" />}
+                  {item.name}
+                </span>
               </Link>
             )
           ))}

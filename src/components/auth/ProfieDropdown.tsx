@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect } from 'react'
 import { logoutAction } from '@/lib/auth/actions'
+import { ButtonLoader } from '@/components/loading/LoadingPrimitives'
 
 interface ProfileDropdownProps {
   
@@ -60,6 +61,7 @@ export default function ProfileDropdown({
   }, [])
 
   const handleLogout = () => {
+    if (isPending) return
     startTransition(async () => {
       await logoutAction()
     })
@@ -176,7 +178,7 @@ export default function ProfileDropdown({
               >
                 {isPending ? (
                   <span className="flex items-center gap-2">
-                    <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <ButtonLoader label="Logging out" />
                     Logging out...
                   </span>
                 ) : (

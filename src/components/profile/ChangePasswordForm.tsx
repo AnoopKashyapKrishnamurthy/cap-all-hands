@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { updatePasswordAction } from '@/lib/auth/actions'
 import { Eye, EyeOff } from 'lucide-react'
+import { ButtonLoader } from '@/components/loading/LoadingPrimitives'
 
 export default function ChangePasswordForm() {
   const [password, setPassword] = useState('')
@@ -39,14 +40,14 @@ export default function ChangePasswordForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 pt-6 border-t mt-8">
+    <form onSubmit={handleSubmit} className="space-y-4 pt-6 border-t mt-8" aria-busy={loading}>
       <h3 className="text-lg font-semibold text-gray-900">Security</h3>
 
       {error && (
-        <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>
+        <p className="text-sm text-red-600 bg-red-50 p-2 rounded" role="alert">{error}</p>
       )}
       {success && (
-        <p className="text-sm text-green-600 bg-green-50 p-2 rounded">{success}</p>
+        <p className="text-sm text-green-600 bg-green-50 p-2 rounded" role="status" aria-live="polite">{success}</p>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -116,7 +117,12 @@ export default function ChangePasswordForm() {
         disabled={loading}
         className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-900 disabled:opacity-50"
       >
-        {loading ? 'Updating...' : 'Update Password'}
+        {loading ? (
+          <span className="flex items-center gap-2">
+            <ButtonLoader label="Updating password" />
+            Updating...
+          </span>
+        ) : 'Update Password'}
       </button>
     </form>
   )

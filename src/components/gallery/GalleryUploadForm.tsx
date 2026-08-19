@@ -3,6 +3,8 @@
 import { useState, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { ButtonLoader } from '@/components/loading/LoadingPrimitives'
+import { startRouteTransition } from '@/components/loading/RouteLoadingIndicator'
 
 export default function GalleryUploadForm() {
     const router = useRouter()
@@ -33,20 +35,19 @@ export default function GalleryUploadForm() {
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault()
+        if (loading) return
         setLoading(true)
         setError(null)
 
-        const {
-            data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!user) { setError('You must be logged in.'); return; }
-        if (!file) { setError('Please select an image.'); return }
-        if (!title.trim()) { setError('Title is required.'); return }
-
-
-
         try {
+            const {
+                data: { user },
+            } = await supabase.auth.getUser()
+
+            if (!user) throw new Error('You must be logged in.')
+            if (!file) throw new Error('Please select an image.')
+            if (!title.trim()) throw new Error('Title is required.')
+
             const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
             const path = `${user.id}/${Date.now()}.${ext}`
 
@@ -71,20 +72,21 @@ export default function GalleryUploadForm() {
 
             if (insertError) throw insertError
 
+            startRouteTransition()
             router.push('/gallery')
             router.refresh()
         } catch (err) {
             console.error(err)
-            setError('Upload failed. Please try again.')
+            setError(err instanceof Error ? err.message : 'Upload failed. Please try again.')
         } finally {
             setLoading(false)
         }
     }
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" aria-busy={loading}>
             {error && (
-                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm">
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm" role="alert">
                     {error}
                 </div>
             )}
@@ -138,7 +140,12 @@ export default function GalleryUploadForm() {
                 disabled={loading || !file}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-                {loading ? 'Uploading...' : 'Upload Photo'}
+                {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                        <ButtonLoader label="Uploading photo" />
+                        Uploading photo...
+                    </span>
+                ) : 'Upload Photo'}
             </button>
         </form>
     )

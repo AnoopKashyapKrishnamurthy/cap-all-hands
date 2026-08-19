@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { RotateCcw, ChevronRight, Play, CheckCircle2, Sparkles } from 'lucide-react'
+import useParticipantSpinner from './useParticipantSpinner'
 
 export interface DirectoryUser {
     id: string ;
@@ -15,76 +16,16 @@ interface PopcornStandupProps {
     users: DirectoryUser[]
 }
 
-type StandupStatus = 'idle' | 'selecting' | 'speaking' | 'finished'
-
 export default function PopcornStandup({ users }: PopcornStandupProps) {
-    const [status, setStatus] = useState<StandupStatus>('idle')
-    const [remainingUsers, setRemainingUsers] = useState<DirectoryUser[]>(users)
-    const [completedUsers, setCompletedUsers] = useState<DirectoryUser[]>([])
-
-    const [currentSpeaker, setCurrentSpeaker] = useState<DirectoryUser | null>(null)
-    const [flickerUser, setFlickerUser] = useState<DirectoryUser | null>(null)
-
-    // Sync state if users prop changes entirely
-    useEffect(() => {
-        setRemainingUsers(users)
-        setCompletedUsers([])
-        setStatus('idle')
-        setCurrentSpeaker(null)
-    }, [users])
-
-    // The Suspense Engine: Handles the rapid cycling
-    useEffect(() => {
-        if (status !== 'selecting') return
-
-        const pool = remainingUsers.length > 0 ? remainingUsers : users
-
-        // FIX 1: Immediately set a flicker user so we don't have an 80ms blank/null frame
-        setFlickerUser(pool[Math.floor(Math.random() * pool.length)])
-
-        // FIX 2: Cycle only through remaining users, not all users
-        const interval = setInterval(() => {
-            const randomFlicker = pool[Math.floor(Math.random() * pool.length)]
-            setFlickerUser(randomFlicker)
-        }, 80)
-
-        const timeout = setTimeout(() => {
-            clearInterval(interval)
-
-            const finalIndex = Math.floor(Math.random() * pool.length)
-            const chosen = pool[finalIndex]
-
-            setCurrentSpeaker(chosen)
-            setRemainingUsers((prev) => prev.filter((u) => u.id !== chosen.id))
-            setStatus('speaking')
-        }, 3000)
-
-        return () => {
-            clearInterval(interval)
-            clearTimeout(timeout)
-        }
-    }, [status, remainingUsers, users])
-
-    // Handlers
-    const triggerNext = () => {
-        if (currentSpeaker) {
-            setCompletedUsers((prev) => [...prev, currentSpeaker])
-        }
-
-        if (remainingUsers.length === 0) {
-            setStatus('finished')
-            return
-        }
-
-        setStatus('selecting')
-    }
-
-    const reset = () => {
-        setStatus('idle')
-        setRemainingUsers(users)
-        setCompletedUsers([])
-        setCurrentSpeaker(null)
-    }
+    const {
+        status,
+        remainingParticipants: remainingUsers,
+        completedParticipants: completedUsers,
+        selectedParticipant: currentSpeaker,
+        flickerParticipant: flickerUser,
+        spinNext: triggerNext,
+        reset,
+    } = useParticipantSpinner(users)
 
     const progress = users.length > 0 ? (completedUsers.length / users.length) * 100 : 0
 

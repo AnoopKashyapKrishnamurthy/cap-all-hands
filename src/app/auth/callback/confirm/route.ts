@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { hasLoginAccess } from '@/lib/access-control'
+
+async function ensureLoginAccess(supabase: Awaited<ReturnType<typeof createClient>>, origin: string) {
+  const access = await hasLoginAccess(supabase)
+  if (access.allowed) return null
+
+  await supabase.auth.signOut()
+  const message = access.error
+    ? 'Unable to verify account access'
+    : 'Your account access has been disabled. Contact an administrator.'
+  return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(message)}`, origin))
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -18,6 +30,8 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
+      const deniedResponse = await ensureLoginAccess(supabase, origin)
+      if (deniedResponse) return deniedResponse
       return NextResponse.redirect(new URL(safeNext, origin))
     }
 
@@ -37,6 +51,8 @@ export async function GET(request: NextRequest) {
     })
 
     if (!error) {
+      const deniedResponse = await ensureLoginAccess(supabase, origin)
+      if (deniedResponse) return deniedResponse
       return NextResponse.redirect(new URL(safeNext, origin))
     }
 

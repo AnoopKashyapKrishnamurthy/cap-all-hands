@@ -7,6 +7,10 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { Play, Pause, ArrowLeft } from "lucide-react"
 import { PiHandsClapping } from "react-icons/pi"
+import FadeInImage from '@/components/loading/FadeInImage'
+import { ButtonLoader, InlineLoader } from '@/components/loading/LoadingPrimitives'
+import { DetailSkeleton } from '@/components/loading/PageSkeletons'
+import { startRouteTransition } from '@/components/loading/RouteLoadingIndicator'
 
 /* TYPES */
 interface Profile {
@@ -57,6 +61,7 @@ export default function BlogPage() {
   const supabase = useMemo(() => createClient(), [])
 
   const [blog, setBlog] = useState<Blog | null>(null)
+  const [initialLoading, setInitialLoading] = useState(true)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
 
@@ -72,6 +77,8 @@ export default function BlogPage() {
 
   const [comments, setComments] = useState<Comment[]>([])
   const [commentText, setCommentText] = useState("")
+  const [commentLoading, setCommentLoading] = useState(false)
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
 
   const [listening, setListening] = useState(false)
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null)
@@ -91,7 +98,10 @@ export default function BlogPage() {
         .eq("slug", slug)
         .single()
 
-      if (!blogData) return
+      if (!blogData) {
+        setInitialLoading(false)
+        return
+      }
 
       setBlog(blogData)
       setProfile(Array.isArray(blogData.profile) ? blogData.profile[0] : blogData.profile)
@@ -115,6 +125,7 @@ export default function BlogPage() {
 
 
       if (!blogData.published && uid !== blogData.author_id) {
+        startRouteTransition()
         router.push("/blogs")
         return
       }
@@ -136,10 +147,12 @@ export default function BlogPage() {
           }))
         )
       }
+
+      setInitialLoading(false)
     }
 
     init()
-  }, [slug])
+  }, [router, slug, supabase])
 
   useEffect(() => {
     return () => {
@@ -252,33 +265,41 @@ export default function BlogPage() {
 
   /* 💬 ADD COMMENT */
   const addComment = async () => {
-    if (!userId || !blog || !commentText.trim()) return
+    if (!userId || !blog || !commentText.trim() || commentLoading) return
+    setCommentLoading(true)
 
-    const { data, error } = await supabase
-      .from("interactions")
-      .insert({
-        user_id: userId,
-        target_id: blog.id,
-        target_type: "blogs",
-        interaction_type: "comment",
-        payload: { text: commentText.trim() },
-      })
-      .select(`*, user:user_profiles(display_name, avatar_url)`)
-      .single()
+    try {
+      const { data, error } = await supabase
+        .from("interactions")
+        .insert({
+          user_id: userId,
+          target_id: blog.id,
+          target_type: "blogs",
+          interaction_type: "comment",
+          payload: { text: commentText.trim() },
+        })
+        .select(`*, user:user_profiles(display_name, avatar_url)`)
+        .single()
 
-    if (error || !data) return
+      if (error || !data) return
 
-    setComments((prev) => [
-      ...prev,
-      { ...data, user: Array.isArray(data.user) ? data.user[0] : data.user },
-    ])
-    setCommentText("")
+      setComments((prev) => [
+        ...prev,
+        { ...data, user: Array.isArray(data.user) ? data.user[0] : data.user },
+      ])
+      setCommentText("")
+    } finally {
+      setCommentLoading(false)
+    }
   }
 
   /* 💬 DELETE COMMENT */
   const deleteComment = async (id: string) => {
+    if (deletingCommentId) return
+    setDeletingCommentId(id)
     setComments((prev) => prev.filter((c) => c.id !== id))
     await supabase.from("interactions").delete().eq("id", id)
+    setDeletingCommentId(null)
   }
 
   /* 📢 PUBLISH */
@@ -295,7 +316,15 @@ export default function BlogPage() {
     setPublishing(false)
   }
 
-  if (!blog) return null
+  if (initialLoading) return <DetailSkeleton />
+
+  if (!blog) {
+    return (
+      <div className="mx-auto max-w-2xl rounded-2xl border bg-white p-10 text-center">
+        <p className="font-medium text-slate-700">Unable to load this blog.</p>
+      </div>
+    )
+  }
 
   const isOwner = userId === blog.author_id
   const isDraft = !blog.published
@@ -311,7 +340,10 @@ export default function BlogPage() {
 
       {/* BACK */}
       <button
-        onClick={() => router.push("/blogs")}
+        onClick={() => {
+          startRouteTransition()
+          router.push("/blogs")
+        }}
         className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 mb-8 transition-colors"
       >
         <ArrowLeft size={16} />
@@ -328,7 +360,12 @@ export default function BlogPage() {
               disabled={publishing}
               className="ml-4 bg-amber-600 hover:bg-amber-700 text-white px-4 py-1.5 rounded-full text-xs font-medium transition-colors disabled:opacity-50"
             >
-              {publishing ? "Publishing…" : "Publish"}
+              {publishing ? (
+                <span className="flex items-center gap-1.5">
+                  <ButtonLoader label="Publishing blog" />
+                  Publishing…
+                </span>
+              ) : "Publish"}
             </button>
           )}
         </div>
@@ -404,7 +441,12 @@ export default function BlogPage() {
       )}
 
       {blog.cover_image && (
-        <img src={blog.cover_image} className="mt-10 rounded-xl w-full object-cover" />
+        <FadeInImage
+          src={blog.cover_image}
+          alt={blog.title}
+          containerClassName="mt-10 aspect-video w-full rounded-xl"
+          className="h-full w-full object-cover"
+        />
       )}
 
       <div className="mx-auto max-w-screen-md px-4 sm:px-6 lg:px-8 mt-12">
@@ -453,9 +495,10 @@ export default function BlogPage() {
                   {userId === c.user_id && (
                     <button
                       onClick={() => deleteComment(c.id)}
+                      disabled={deletingCommentId === c.id}
                       className="text-xs text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      Delete
+                      {deletingCommentId === c.id ? <ButtonLoader label="Deleting comment" /> : 'Delete'}
                     </button>
                   )}
                 </div>
@@ -470,14 +513,16 @@ export default function BlogPage() {
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addComment()}
+              disabled={commentLoading}
               placeholder="Write a response..."
               className="flex-1 border rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200"
             />
             <button
               onClick={addComment}
-              className="bg-black text-white px-4 py-2 rounded-full text-sm"
+              disabled={commentLoading || !commentText.trim()}
+              className="bg-black text-white px-4 py-2 rounded-full text-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Post
+              {commentLoading ? <ButtonLoader label="Posting comment" /> : 'Post'}
             </button>
           </div>
         </div>
@@ -504,7 +549,7 @@ export default function BlogPage() {
             </div>
 
             {loadingClaps ? (
-              <div className="text-center text-gray-400 py-8 text-sm">Loading…</div>
+              <div className="flex justify-center py-8"><InlineLoader label="Loading claps…" /></div>
             ) : clapEntries.length === 0 ? (
               <div className="text-center text-gray-400 py-8 text-sm">No claps yet.</div>
             ) : (

@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useEffect, FormEvent } from 'react'
+import { useState, useEffect, FormEvent, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Event } from '@/lib/types'
+import { ButtonLoader, InlineLoader } from '@/components/loading/LoadingPrimitives'
+import { startRouteTransition } from '@/components/loading/RouteLoadingIndicator'
 
 interface EventFormProps {
     event?: Event
@@ -12,8 +14,9 @@ interface EventFormProps {
 export default function EventForm({ event }: EventFormProps) {
     const [hosts, setHosts] = useState<string[]>([])
     const [allUsers, setAllUsers] = useState<any[]>([])
+    const [usersLoading, setUsersLoading] = useState(true)
     const router = useRouter()
-    const supabase = createClient()
+    const supabase = useMemo(() => createClient(), [])
     const isEditMode = !!event
 
     const [userId, setUserId] = useState<string | null>(null)
@@ -47,6 +50,7 @@ export default function EventForm({ event }: EventFormProps) {
             .select('id, display_name')
             .then(({ data }) => {
                 setAllUsers(data || [])
+                setUsersLoading(false)
             })
 
         // 3. Fetch existing hosts if in Edit Mode
@@ -78,6 +82,7 @@ export default function EventForm({ event }: EventFormProps) {
     }
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault()
+        if (loading) return
 
         if (!userId) {
             setError('You must be logged in.')
@@ -100,6 +105,7 @@ export default function EventForm({ event }: EventFormProps) {
         try {
             let imageUrl = event?.image_url ?? null
             let imageStoragePath = event?.image_storage_path ?? null
+            let destinationEventId = event?.id
             const finalPresentationUrl = normalizeCanvaUrl(presentationUrl)
 
             // Image Upload Logic remains the same
@@ -171,8 +177,6 @@ export default function EventForm({ event }: EventFormProps) {
 
                     if (insertError) throw insertError
                 }
-                router.push(`/events/${event!.id}`)
-                router.refresh()
             } else {
                 // Insert New Event
                 const { data: eventData, error: insertError } = await supabase
@@ -191,6 +195,7 @@ export default function EventForm({ event }: EventFormProps) {
                     .single()
 
                 if (insertError) throw insertError
+                destinationEventId = eventData.id
 
                 // Insert Hosts
                 if (hosts.length > 0) {
@@ -210,7 +215,9 @@ export default function EventForm({ event }: EventFormProps) {
                     if (hostInsertError) throw hostInsertError
                 }
             }
-            router.push(`/events/${event!.id}`)
+            if (!destinationEventId) throw new Error('Unable to open the saved event.')
+            startRouteTransition()
+            router.push(`/events/${destinationEventId}`)
             router.refresh()
 
         } catch (err: any) {
@@ -232,9 +239,9 @@ export default function EventForm({ event }: EventFormProps) {
     }
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl mx-auto p-4">
+        <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl mx-auto p-4" aria-busy={loading}>
             {error && (
-                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm">
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm" role="alert">
                     {error}
                 </div>
             )}
@@ -323,6 +330,9 @@ export default function EventForm({ event }: EventFormProps) {
 
                 {/* Dropdown */}
                 <div className="border rounded-xl max-h-40 overflow-y-auto">
+                    {usersLoading && (
+                        <div className="p-4"><InlineLoader label="Loading team members..." /></div>
+                    )}
                     {allUsers
                         .filter(user =>
                             (user.display_name || '')
@@ -395,7 +405,12 @@ export default function EventForm({ event }: EventFormProps) {
                 disabled={loading}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition disabled:opacity-50"
             >
-                {loading ? 'Processing...' : isEditMode ? 'Update Event' : 'Create Event'}
+                {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                        <ButtonLoader label={imageFile ? 'Uploading image and saving event' : 'Saving event'} />
+                        {imageFile ? 'Uploading & saving...' : isEditMode ? 'Updating event...' : 'Creating event...'}
+                    </span>
+                ) : isEditMode ? 'Update Event' : 'Create Event'}
             </button>
         </form>
     )

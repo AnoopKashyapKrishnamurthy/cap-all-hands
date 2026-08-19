@@ -24,7 +24,15 @@ export default async function EditBlogPage({ params }: EditPageProps) {
   }
 
   // 🔐 Only author can edit
-  if (blog.author_id !== user.id) {
+  const { data: currentProfile } = await supabase
+    .from('user_profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+  const isAdmin = currentProfile?.role === 'admin'
+
+  // Authors and administrators can edit. RLS remains the database boundary.
+  if (blog.author_id !== user.id && !isAdmin) {
     notFound()
   }
 
@@ -33,7 +41,7 @@ export default async function EditBlogPage({ params }: EditPageProps) {
 
       <div className="space-y-3">
         <Link
-          href="/blogs"
+          href={isAdmin ? '/admin/blogs' : '/blogs'}
           className="text-sm text-blue-600 hover:underline"
         >
           ← Back to Blogs

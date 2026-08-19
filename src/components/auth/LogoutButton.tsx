@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { logoutAction } from '@/lib/auth/actions'
+import { ButtonLoader } from '@/components/loading/LoadingPrimitives'
 
 interface LogoutButtonProps {
   variant?: 'default' | 'minimal'
@@ -52,7 +53,7 @@ export default function LogoutButton({
       >
         {isPending ? (
           <span className="flex items-center gap-2">
-            <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <ButtonLoader label="Logging out" />
             Logging out...
           </span>
         ) : (

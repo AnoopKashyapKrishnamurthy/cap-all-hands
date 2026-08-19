@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Review } from '@/lib/types'
+import FadeInImage from '@/components/loading/FadeInImage'
+import { ButtonLoader } from '@/components/loading/LoadingPrimitives'
 
 interface ReviewCardProps {
   review: Review
@@ -16,7 +18,7 @@ export default function ReviewCard({
   currentUserId,
 }: ReviewCardProps) {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const [deleting, setDeleting] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -118,7 +120,7 @@ export default function ReviewCard({
 
   // 🗑 Delete
   const handleDelete = async () => {
-    if (!isOwner) return
+    if (!isOwner || deleting) return
 
     setDeleting(true)
 
@@ -229,7 +231,12 @@ export default function ReviewCard({
                       }}
                       className="text-red-600"
                     >
-                      {deleting ? 'Deleting...' : 'Confirm'}
+                      {deleting ? (
+                        <span className="flex items-center gap-1.5">
+                          <ButtonLoader label="Deleting review" />
+                          Deleting...
+                        </span>
+                      ) : 'Confirm'}
                     </button>
 
                     <button
@@ -253,8 +260,10 @@ export default function ReviewCard({
         {/* Thumbnail */}
         {thumbnail && (
           <div className="w-full md:w-40 h-40 rounded-xl overflow-hidden flex-shrink-0">
-            <img
+            <FadeInImage
               src={thumbnail}
+              alt={review.review_title}
+              containerClassName="h-full w-full"
               className="w-full h-full object-cover group-hover:scale-105 transition"
             />
           </div>

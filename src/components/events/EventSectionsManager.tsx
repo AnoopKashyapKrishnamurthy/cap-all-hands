@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { EventSection } from '@/lib/types'
 import Link from 'next/link'
+import { ButtonLoader, Skeleton } from '@/components/loading/LoadingPrimitives'
 
 interface Props {
     eventId: string
@@ -94,6 +95,7 @@ export default function EventSectionsManager({ eventId }: Props) {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [saving, setSaving] = useState(false)
+    const [deletingId, setDeletingId] = useState<string | null>(null)
 
     const [editingId, setEditingId] = useState<string | null>(null)
     const [title, setTitle] = useState('')
@@ -116,14 +118,11 @@ export default function EventSectionsManager({ eventId }: Props) {
             setError(error.message)
         } else {
             setSections(data ?? [])
-            // Automatically set the order for the NEXT section to be added
-            if (!editingId) {
-                setDisplayOrder(data ? data.length : 0)
-            }
+            setDisplayOrder(data ? data.length : 0)
         }
 
         setLoading(false)
-    }, [eventId, supabase, editingId])
+    }, [eventId, supabase])
 
     useEffect(() => {
         fetchSections()
@@ -160,6 +159,8 @@ export default function EventSectionsManager({ eventId }: Props) {
 
     const handleDelete = async (id: string) => {
         if (!confirm('Delete this section?')) return
+        if (deletingId) return
+        setDeletingId(id)
 
         const { error } = await supabase
             .from('event_sections')
@@ -168,16 +169,19 @@ export default function EventSectionsManager({ eventId }: Props) {
 
         if (error) {
             setError(error.message)
+            setDeletingId(null)
             return
         }
 
         setSections(prev => prev.filter(s => s.id !== id))
         // If they deleted the one they were editing, reset the form
         if (editingId === id) resetForm()
+        setDeletingId(null)
     }
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault()
+        if (saving) return
 
         if (!sectionType.trim()) {
             setError('Section type is required.')
@@ -220,7 +224,14 @@ export default function EventSectionsManager({ eventId }: Props) {
     }
 
     if (loading) {
-        return <p className="text-sm text-gray-500 animate-pulse">Loading sections…</p>
+        return (
+            <div className="space-y-4" role="status" aria-busy="true" aria-label="Loading event sections">
+                <Skeleton className="h-7 w-36" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-48 w-full rounded-2xl" />
+                <span className="sr-only">Loading event sections</span>
+            </div>
+        )
     }
 
     return (
@@ -268,9 +279,10 @@ export default function EventSectionsManager({ eventId }: Props) {
                                 </button>
                                 <button
                                     onClick={() => handleDelete(section.id)}
+                                    disabled={deletingId === section.id}
                                     className="text-red-500 hover:text-red-700 text-sm font-medium"
                                 >
-                                    Delete
+                                    {deletingId === section.id ? <ButtonLoader label="Deleting section" /> : 'Delete'}
                                 </button>
                             </div>
                         </div>
@@ -366,7 +378,12 @@ export default function EventSectionsManager({ eventId }: Props) {
                         disabled={saving}
                         className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
                     >
-                        {saving ? 'Saving…' : editingId ? 'Update Section' : 'Add Section'}
+                        {saving ? (
+                            <span className="flex items-center gap-2">
+                                <ButtonLoader label="Saving section" />
+                                Saving…
+                            </span>
+                        ) : editingId ? 'Update Section' : 'Add Section'}
                     </button>
 
                     {editingId && (

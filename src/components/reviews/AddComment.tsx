@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { ButtonLoader } from '@/components/loading/LoadingPrimitives'
 
 
 export function AddComment({ reviewId }: { reviewId: string }) {
@@ -71,7 +72,7 @@ export function AddComment({ reviewId }: { reviewId: string }) {
           disabled={!text.trim() || loading}
           className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? '…' : 'Post'}
+          {loading ? <ButtonLoader label="Posting comment" /> : 'Post'}
         </button>
       </div>
 

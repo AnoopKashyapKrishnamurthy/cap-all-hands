@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { ButtonLoader } from '@/components/loading/LoadingPrimitives';
 
 export default function ForgotPasswordForm() {
   const [email, setEmail] = useState('');
@@ -11,6 +12,7 @@ export default function ForgotPasswordForm() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (loading) return;
     setError(null);
     setSuccess(false);
     setLoading(true);
@@ -38,15 +40,15 @@ export default function ForgotPasswordForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6" aria-busy={loading}>
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4" role="alert">
           <p className="text-sm font-medium text-red-800">{error}</p>
         </div>
       )}
 
       {success && (
-        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4" role="status" aria-live="polite">
           <p className="text-sm font-medium text-green-800">
             If that email exists, a password reset link has been sent.
           </p>
@@ -77,7 +79,12 @@ export default function ForgotPasswordForm() {
         disabled={loading}
         className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {loading ? 'Sending reset link...' : 'Send reset link'}
+        {loading ? (
+          <span className="flex items-center gap-2">
+            <ButtonLoader label="Sending reset link" />
+            Sending reset link...
+          </span>
+        ) : 'Send reset link'}
       </button>
     </form>
   );

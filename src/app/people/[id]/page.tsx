@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { protectRoute } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
+import FadeInImage from '@/components/loading/FadeInImage'
 
 interface PeopleProfilePageProps {
   params: Promise<{ id: string }>
@@ -63,9 +64,10 @@ export default async function PeopleProfilePage({ params }: PeopleProfilePagePro
 
             {/* Avatar */}
             {profile.avatar_url ? (
-              <img
+              <FadeInImage
                 src={profile.avatar_url}
                 alt={`${profile.display_name || 'User'} avatar`}
+                containerClassName="h-24 w-24 rounded-full ring-4 ring-white bg-white shadow sm:h-28 sm:w-28"
                 className="h-24 w-24 sm:h-28 sm:w-28 rounded-full object-cover ring-4 ring-white bg-white shadow"
               />
             ) : (

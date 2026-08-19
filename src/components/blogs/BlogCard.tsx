@@ -4,6 +4,9 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Blog } from '@/lib/types'
+import { ButtonLoader } from '@/components/loading/LoadingPrimitives'
+import FadeInImage from '@/components/loading/FadeInImage'
+import { startRouteTransition } from '@/components/loading/RouteLoadingIndicator'
 
 interface BlogCardProps {
   blog: Blog
@@ -34,12 +37,13 @@ export default function BlogCard({
   )
 
   const goToBlog = () => {
+    startRouteTransition()
     router.push(`/blogs/${blog.slug}`)
   }
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!isOwner) return
+    if (!isOwner || deleting) return
 
     setDeleting(true)
 
@@ -82,9 +86,10 @@ export default function BlogCard({
       <div className="h-44 w-full overflow-hidden bg-slate-100 relative">
 
         {blog.cover_image ? (
-          <img
+          <FadeInImage
             src={blog.cover_image}
             alt={blog.title}
+            containerClassName="h-full w-full"
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
           />
         ) : (
@@ -161,9 +166,10 @@ export default function BlogCard({
               <div className="flex gap-3 text-xs">
 
                 <button
-                  onClick={() =>
+                  onClick={() => {
+                    startRouteTransition()
                     router.push(`/blogs/edit/${blog.id}`)
-                  }
+                  }}
                   className="text-slate-500 hover:text-slate-900"
                 >
                   Edit
@@ -182,7 +188,12 @@ export default function BlogCard({
                     disabled={deleting}
                     className="text-red-600 font-medium"
                   >
-                    {deleting ? 'Deleting...' : 'Confirm'}
+                    {deleting ? (
+                      <span className="flex items-center gap-1.5">
+                        <ButtonLoader label="Deleting blog" />
+                        Deleting...
+                      </span>
+                    ) : 'Confirm'}
                   </button>
                 )}
 
