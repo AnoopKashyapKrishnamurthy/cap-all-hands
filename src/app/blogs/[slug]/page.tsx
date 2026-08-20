@@ -1,16 +1,18 @@
 'use client'
 
-import { useEffect, useState, useRef, useMemo } from "react"
+import { useCallback, useEffect, useState, useRef, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
-import { Play, Pause, ArrowLeft } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import { PiHandsClapping } from "react-icons/pi"
 import FadeInImage from '@/components/loading/FadeInImage'
 import { ButtonLoader, InlineLoader } from '@/components/loading/LoadingPrimitives'
 import { DetailSkeleton } from '@/components/loading/PageSkeletons'
 import { startRouteTransition } from '@/components/loading/RouteLoadingIndicator'
+import BlogArticle, { type BlogSentence } from '@/components/blogs/BlogArticle'
+import BlogReaderControls from '@/components/blogs/BlogReaderControls'
+import { useReadingPreferences } from '@/components/blogs/useReadingPreferences'
+import { useSpeechReader } from '@/components/blogs/useSpeechReader'
 
 /* TYPES */
 interface Profile {
@@ -45,13 +47,17 @@ interface ClapEntry {
   avatar_url?: string
 }
 
-/* HELPERS */
-const cleanText = (text: string) =>
-  text
-    .replace(/[#_*>\-\[\]\(\)`]/g, '')
-    .replace(/\n+/g, ' ')
-    .replace(/\s+/g, ' ')
+interface CommentQueryRow extends Omit<Comment, 'user'> {
+  user?: Profile | Profile[] | null
+}
 
+interface ClapQueryRow {
+  user_id: string
+  payload?: { count?: number } | null
+  user?: Profile | Profile[] | null
+}
+
+/* HELPERS */
 const readingTime = (text: string) =>
   Math.max(1, Math.ceil(text.split(/\s+/).length / 200))
 
@@ -80,10 +86,16 @@ export default function BlogPage() {
   const [commentLoading, setCommentLoading] = useState(false)
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
 
-  const [listening, setListening] = useState(false)
-  const speechRef = useRef<SpeechSynthesisUtterance | null>(null)
-
   const [publishing, setPublishing] = useState(false)
+  const [sentences, setSentences] = useState<BlogSentence[]>([])
+  const [focusMode, setFocusMode] = useState(false)
+  const focusToggleRef = useRef<HTMLButtonElement>(null)
+  const previousFocusModeRef = useRef(false)
+  const handleSentencesChange = useCallback((nextSentences: BlogSentence[]) => {
+    setSentences(nextSentences)
+  }, [])
+  const reader = useSpeechReader(sentences)
+  const readingPreferences = useReadingPreferences()
 
   /* LOAD */
   useEffect(() => {
@@ -140,10 +152,11 @@ export default function BlogPage() {
           .eq("interaction_type", "comment")
           .order("created_at", { ascending: true })
 
+        const commentRows = (commentsData || []) as CommentQueryRow[]
         setComments(
-          (commentsData || []).map((c: any) => ({
+          commentRows.map((c) => ({
             ...c,
-            user: Array.isArray(c.user) ? c.user[0] : c.user,
+            user: (Array.isArray(c.user) ? c.user[0] : c.user) ?? undefined,
           }))
         )
       }
@@ -155,10 +168,20 @@ export default function BlogPage() {
   }, [router, slug, supabase])
 
   useEffect(() => {
-    return () => {
-      if (typeof window !== "undefined") speechSynthesis.cancel()
+    if (!focusMode) return
+    const exitOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setFocusMode(false)
     }
-  }, [])
+    window.addEventListener('keydown', exitOnEscape)
+    return () => window.removeEventListener('keydown', exitOnEscape)
+  }, [focusMode])
+
+  useEffect(() => {
+    if (previousFocusModeRef.current && !focusMode) {
+      window.requestAnimationFrame(() => focusToggleRef.current?.focus({ preventScroll: true }))
+    }
+    previousFocusModeRef.current = focusMode
+  }, [focusMode])
 
   /* 👏 CLAP */
   const handleClap = async () => {
@@ -209,7 +232,8 @@ export default function BlogPage() {
       .eq("target_type", "blogs")
       .eq("interaction_type", "like")
 
-    const entries: ClapEntry[] = (clapData || []).map((r: any) => {
+    const clapRows = (clapData || []) as ClapQueryRow[]
+    const entries: ClapEntry[] = clapRows.map((r) => {
       const u = Array.isArray(r.user) ? r.user[0] : r.user
       return {
         user_id: r.user_id,
@@ -221,46 +245,6 @@ export default function BlogPage() {
 
     setClapEntries(entries)
     setLoadingClaps(false)
-  }
-
-  /* 🔊 LISTEN */
-  const toggleListen = () => {
-    if (!blog) return
-
-    if (listening) {
-      speechSynthesis.cancel()
-      setListening(false)
-      return
-    }
-
-    // Wait for voices to load
-    const speak = () => {
-      const voices = speechSynthesis.getVoices()
-
-      const preferred =
-        voices.find(v => v.name === "Google UK English Female") ||
-        voices.find(v => v.name === "Google US English") ||
-        voices.find(v => v.lang === "en-GB") ||
-        voices.find(v => v.lang.startsWith("en"))
-
-      const utter = new SpeechSynthesisUtterance(cleanText(blog.content))
-      if (preferred) utter.voice = preferred
-      utter.rate = 0.92
-      utter.pitch = 1.05
-      utter.volume = 1
-      utter.onend = () => setListening(false)
-
-      speechRef.current = utter
-      speechSynthesis.speak(utter)
-      setListening(true)
-    }
-
-    // Voices may not be loaded yet on first call
-    if (speechSynthesis.getVoices().length) {
-      speak()
-    } else {
-      speechSynthesis.onvoiceschanged = speak
-    }
   }
 
   /* 💬 ADD COMMENT */
@@ -336,22 +320,28 @@ export default function BlogPage() {
   })
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-16">
+    <div
+      className={focusMode ? 'fixed inset-0 z-[60] overflow-y-auto bg-stone-50' : ''}
+      aria-label={focusMode ? 'Focus reading mode' : undefined}
+    >
+    <div className={`mx-auto min-w-0 px-4 py-10 sm:px-6 sm:py-16 ${focusMode ? 'max-w-4xl' : 'max-w-2xl'}`}>
 
       {/* BACK */}
-      <button
-        onClick={() => {
-          startRouteTransition()
-          router.push("/blogs")
-        }}
-        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 mb-8 transition-colors"
-      >
-        <ArrowLeft size={16} />
-        All blogs
-      </button>
+      {!focusMode && (
+        <button
+          onClick={() => {
+            startRouteTransition()
+            router.push("/blogs")
+          }}
+          className="mb-8 flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2"
+        >
+          <ArrowLeft size={16} aria-hidden="true" />
+          All blogs
+        </button>
+      )}
 
       {/* DRAFT BANNER + PUBLISH */}
-      {isDraft && (
+      {isDraft && !focusMode && (
         <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-6 text-sm text-amber-800">
           <span>This post is a draft — only you can see it.</span>
           {isOwner && (
@@ -376,7 +366,11 @@ export default function BlogPage() {
       {/* AUTHOR */}
       <div className="flex items-center gap-3 mt-6 text-sm text-gray-500">
         {profile?.avatar_url ? (
-          <img src={profile.avatar_url} className="h-10 w-10 rounded-full object-cover" />
+          <img
+            src={profile.avatar_url}
+            alt={`${profile.display_name || 'Author'} avatar`}
+            className="h-10 w-10 rounded-full object-cover"
+          />
         ) : (
           <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center font-medium">
             {profile?.display_name?.charAt(0)}
@@ -388,8 +382,33 @@ export default function BlogPage() {
         </div>
       </div>
 
+      <BlogReaderControls
+        status={reader.status}
+        supported={reader.supported}
+        voices={reader.voices}
+        selectedVoiceId={reader.selectedVoiceId}
+        rate={reader.rate}
+        currentSentenceIndex={reader.currentSentenceIndex}
+        sentenceCount={reader.sentenceCount}
+        errorMessage={reader.errorMessage}
+        fontSize={readingPreferences.fontSize}
+        lineSpacing={readingPreferences.lineSpacing}
+        focusMode={focusMode}
+        focusToggleRef={focusToggleRef}
+        onPlay={reader.play}
+        onPause={reader.pause}
+        onStop={reader.stop}
+        onPrevious={reader.previous}
+        onNext={reader.next}
+        onRateChange={reader.setRate}
+        onVoiceChange={reader.setVoice}
+        onFontSizeChange={readingPreferences.setFontSize}
+        onLineSpacingChange={readingPreferences.setLineSpacing}
+        onFocusModeChange={() => setFocusMode((enabled) => !enabled)}
+      />
+
       {/* ACTIONS */}
-      {blog.published && (
+      {blog.published && !focusMode && (
         <div className="flex justify-between border-y py-4 mt-8">
 
           {/* CLAP BUTTON + COUNT */}
@@ -429,14 +448,6 @@ export default function BlogPage() {
 
           </div>
 
-          {/* LISTEN */}
-          <button
-            onClick={toggleListen}
-            className="flex items-center gap-2 text-sm"
-          >
-            {listening ? <Pause size={18} /> : <Play size={18} />}
-            {listening ? 'Pause' : 'Listen'}
-          </button>
         </div>
       )}
 
@@ -449,41 +460,28 @@ export default function BlogPage() {
         />
       )}
 
-      <div className="mx-auto max-w-screen-md px-4 sm:px-6 lg:px-8 mt-12">
-        <article className="
-    prose 
-    prose-stone 
-    max-w-none 
-    sm:prose-lg 
-    lg:prose-xl 
-    prose-headings:font-serif 
-    prose-headings:font-bold 
-    prose-headings:tracking-tight 
-    prose-p:font-serif 
-    prose-p:text-gray-800 
-    prose-p:leading-relaxed 
-    prose-a:text-green-700 
-    prose-a:no-underline 
-    hover:prose-a:underline 
-    prose-img:rounded-sm
-    prose-blockquote:border-l-black 
-    prose-blockquote:italic
-    selection:bg-green-100
-  ">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {blog.content}
-          </ReactMarkdown>
-        </article>
+      <div className={`mx-auto mt-12 min-w-0 ${focusMode ? 'max-w-3xl' : 'max-w-screen-md sm:px-4'}`}>
+        <BlogArticle
+          content={blog.content}
+          activeSentenceIndex={reader.activeSentenceIndex}
+          fontSize={readingPreferences.fontSize}
+          lineSpacing={readingPreferences.lineSpacing}
+          onSentencesChange={handleSentencesChange}
+        />
       </div>
       {/* COMMENTS */}
-      {blog.published && (
+      {blog.published && !focusMode && (
         <div className="mt-16 space-y-6">
           <h3 className="font-semibold">Responses ({comments.length})</h3>
 
           {comments.map((c) => (
             <div key={c.id} className="flex gap-3 group">
               {c.user?.avatar_url ? (
-                <img src={c.user.avatar_url} className="h-8 w-8 rounded-full object-cover" />
+                <img
+                  src={c.user.avatar_url}
+                  alt={`${c.user.display_name || 'Comment author'} avatar`}
+                  className="h-8 w-8 rounded-full object-cover"
+                />
               ) : (
                 <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-xs">
                   {c.user?.display_name?.charAt(0)}
@@ -529,7 +527,7 @@ export default function BlogPage() {
       )}
 
       {/* CLAP MODAL */}
-      {showClapModal && (
+      {showClapModal && !focusMode && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
           onClick={() => setShowClapModal(false)}
@@ -557,7 +555,11 @@ export default function BlogPage() {
                 {clapEntries.map((e) => (
                   <li key={e.user_id} className="flex items-center gap-3">
                     {e.avatar_url ? (
-                      <img src={e.avatar_url} className="h-9 w-9 rounded-full object-cover" />
+                      <img
+                        src={e.avatar_url}
+                        alt={`${e.display_name || 'Reader'} avatar`}
+                        className="h-9 w-9 rounded-full object-cover"
+                      />
                     ) : (
                       <div className="h-9 w-9 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium">
                         {e.display_name?.charAt(0)}
@@ -576,6 +578,7 @@ export default function BlogPage() {
         </div>
       )}
 
+    </div>
     </div>
   )
 }

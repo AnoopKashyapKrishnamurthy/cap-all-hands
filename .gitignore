@@ -13,8 +13,11 @@
 # production
 /build
 
-#supabase
+# supabase local CLI state and secrets
 /supabase
+/supabase/.temp/
+/supabase/.branches/
+/supabase/.env
 
 # misc
 .DS_Store
